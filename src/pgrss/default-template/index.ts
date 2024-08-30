@@ -692,8 +692,10 @@ export function render({
                 [
                   {
                     text: [
-                      { text: "Cargo: ", style: ["bold"] },
-                      document.responsibles?.legal?.position ?? FIELD_EMPTY,
+                      { text: "CPF: ", style: ["bold"] },
+                      document.responsibles?.legal?.taxpayerNumber
+                        ? cpfMask(document.responsibles?.legal?.taxpayerNumber)
+                        : FIELD_EMPTY,
                     ],
                     border: borderOptions.bottomOnly,
                   },
@@ -752,6 +754,26 @@ export function render({
                 ],
                 [
                   {
+                    text: [
+                      { text: "Telefone: ", style: ["bold"] },
+                      techinical.phone
+                        ? phoneMask(techinical.phone)
+                        : FIELD_EMPTY,
+                    ],
+                    border: borderOptions.bottomOnly,
+                  },
+                  {
+                    text: [
+                      { text: "Conselho de Classe: ", style: ["bold"] },
+                      techinical?.professionalClass
+                        ? `${techinical?.professionalClass?.institution}  ${techinical?.professionalClass?.identity}`
+                        : FIELD_EMPTY,
+                    ],
+                    border: borderOptions.bottomOnly,
+                  },
+                ],
+                [
+                  {
                     text: "3.2.2 IMPLEMENTAÇÃO DO PGRS",
                     border: borderOptions.bottomOnly,
                     style: ["bold"],
@@ -785,6 +807,29 @@ export function render({
                       { text: "Email: ", style: ["bold"] },
                       document.responsibles?.implementation?.email ??
                         FIELD_EMPTY,
+                    ],
+                    border: borderOptions.bottomOnly,
+                  },
+                ],
+                [
+                  {
+                    text: [
+                      { text: "CPF: ", style: ["bold"] },
+                      document.responsibles?.implementation?.taxpayerNumber
+                        ? cpfMask(
+                            document.responsibles?.implementation
+                              ?.taxpayerNumber
+                          )
+                        : FIELD_EMPTY,
+                    ],
+                    border: borderOptions.bottomOnly,
+                  },
+                  {
+                    text: [
+                      { text: "Conselho de Classe: ", style: ["bold"] },
+                      document.responsibles?.implementation?.professionalClass
+                        ? `${document.responsibles?.implementation?.professionalClass?.institution}  ${document.responsibles?.implementation?.professionalClass?.identity}`
+                        : FIELD_EMPTY,
                     ],
                     border: borderOptions.bottomOnly,
                   },
@@ -860,7 +905,7 @@ export function render({
                           : FIELD_EMPTY,
                       },
                     ],
-                    border: borderOptions.noBorder,
+                    border: borderOptions.bottomOnly,
                     colSpan: 2,
                   },
                   {
@@ -882,20 +927,27 @@ export function render({
                     border: borderOptions.noBorder,
                   },
                 ],
+                [
+                  {
+                    text: [
+                      {
+                        text: "7. Número de Atendimentos/Dia: ",
+                        style: ["bold"],
+                      },
+                      document.company?.healthAppointmentsByDay?.toLocaleString(
+                        LOCALE
+                      ) ?? FIELD_EMPTY,
+                    ],
+                    border: borderOptions.bottomOnly,
+                    colSpan: 2,
+                  },
+                  {
+                    text: "",
+                    border: borderOptions.noBorder,
+                  },
+                ],
               ],
             },
-          },
-        ],
-      },
-      {
-        style: ["text-justify"],
-        pageBreak: "before",
-        lineHeight: 1.3,
-        stack: [
-          { text: "2.1 CARACTERIZAÇAO DO EMPREENDIMENTO", style: ["bold"] },
-          {
-            text: document.company?.activityDescription ?? FIELD_EMPTY,
-            margin: [0, 15, 0, 0],
           },
         ],
       },
@@ -914,587 +966,111 @@ export function render({
         ],
       },
       {
+        style: ["text-justify"],
+        marginTop: 50,
+        lineHeight: 1.3,
+        stack: [
+          { text: "4 CARACTERIZAÇAO DO EMPREENDIMENTO", style: ["bold"] },
+          {
+            text: document.company?.activityDescription ?? FIELD_EMPTY,
+            margin: [0, 15, 0, 0],
+          },
+        ],
+      },
+      {
         pageBreak: "before",
         pageOrientation: "landscape",
         stack: [
           {
-            text: "4    FASE I – DIAGNÓSTICO DA SITUAÇÃO ATUAL",
+            text: "5 MANEJO DOS RESÍDUOS SÓLIDOS",
             style: ["bold"],
           },
           {
-            text: "4.1 LEVANTAMENTO QUALI E QUANTITATIVO DOS RESÍDUOS GERADOS",
+            text: "O acondicionamento de cada tipo de resíduo é realizado de acordo com as determinações e limites estabelecidos na resolução.",
+            marginTop: 20,
+          },
+          {
+            marginTop: 15,
+            text: [
+              { text: "GRUPO A – ", bold: true },
+              "Devem ser acondicionados em sacos branco leitosos, com identificação e simbologia de Resíduo Infectante. Os sacos devem ser substituídos ao atingirem o limite de 2/3 (dois terços) de sua capacidade ou então a cada 48 (quarenta e oito) horas, independentemente do volume, visando o conforto ambiental e a segurança dos usuários e profissionais.",
+            ],
+          },
+          {
+            marginTop: 15,
+            text: [
+              { text: "GRUPO B – ", bold: true },
+              "Devem ser acondicionados em bombonas ou recipientes plásticos contendo a identificação e simbologia de Resíduo Perigoso (químico). ",
+            ],
+          },
+          {
+            marginTop: 15,
+            text: [
+              { text: "GRUPO C – ", bold: true },
+              "Fontes radioativas devem seguir as determinações da Comissão Nacional de Energia Nuclear (CNEM).",
+            ],
+          },
+          {
+            marginTop: 15,
+            text: [
+              { text: "GRUPO D – ", bold: true },
+              "Os resíduos recicláveis não contaminados devem ser acondicionados em sacos plásticos coloridos (azul – papel; amarelo – metal; vermelho – plástico; verde – vidro) e em recipientes com nome e simbologia de Resíduo Reciclável.  Os resíduos orgânicos e não recicláveis devem ser acondicionados em sacos plásticos de cor marrom ou cinza, e em recipientes identificados com nome e simbologia de Resíduo Não-Reciclável.",
+            ],
+          },
+          {
+            marginTop: 15,
+            text: [
+              { text: "GRUPO E – ", bold: true },
+              "Devem ser acondicionados em recipientes identificados com nome e simbologia, rígidos, providos com tampa, resistentes à punctura, ruptura e vazamento. Os recipientes devem ser substituídos de acordo com a demanda ou quando o nível de preenchimento atingir 3/4 da capacidade ou de acordo com as instruções do fabricante, sendo proibidos seu esvaziamento manual e seu reaproveitamento.",
+            ],
+          },
+        ],
+      },
+      {
+        pageBreak: "before",
+        pageOrientation: "landscape",
+        stack: [
+          {
+            text: "Os resíduos gerados pela empresa são transportados e destinados conforme apresentados a seguir.",
+          },
+          {
+            text: "GRUPO A",
             style: ["bold"],
+            marginTop: 20,
           },
           {
-            lineHeight: 1.2,
             marginTop: 15,
-            fontSize: 10,
-            stack: [
-              {
-                table: {
-                  widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
-                  headerRows: 3,
-                  dontBreakRows: true,
-                  body: [
-                    [
-                      {
-                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
-                        colSpan: 9,
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        text: "A) RESÍDUOS PERIGOSOS (CLASSE I)",
-                        colSpan: 5,
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      {
-                        stack: [
-                          {
-                            columns: [
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -4,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "SIM",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              !wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -2,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "NÃO",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
-                                style: "tableBody",
-                                width: "*",
-                              },
-                            ],
-                          },
-                        ],
-                        colSpan: 4,
-                      },
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        stack: [
-                          { text: "Ponto de geração: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Resíduos Gerados: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Quantificação: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de acondicionamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de armazenamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Tratamento/Destinação: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Coleta interna: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pelo transporte:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pela disposição final:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                    ],
-                    // ...wastesClassI,
-                  ],
-                },
-              },
+            text: [
+              { text: "GRUPO A – ", bold: true },
+              "Devem ser acondicionados em sacos branco leitosos, com identificação e simbologia de Resíduo Infectante. Os sacos devem ser substituídos ao atingirem o limite de 2/3 (dois terços) de sua capacidade ou então a cada 48 (quarenta e oito) horas, independentemente do volume, visando o conforto ambiental e a segurança dos usuários e profissionais.",
             ],
           },
           {
-            lineHeight: 1.2,
             marginTop: 15,
-            fontSize: 10,
-            stack: [
-              {
-                pageBreak: "before",
-                table: {
-                  widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
-                  headerRows: 3,
-                  dontBreakRows: true,
-                  body: [
-                    [
-                      {
-                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
-                        colSpan: 9,
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        text: "A) RESÍDUOS NÃO RECICLÁVEIS (CLASSE IIA)",
-                        colSpan: 5,
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      {
-                        stack: [
-                          {
-                            columns: [
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -4,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "SIM",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              !wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -2,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "NÃO",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
-                                style: "tableBody",
-                                width: "*",
-                              },
-                            ],
-                          },
-                        ],
-                        colSpan: 4,
-                      },
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        stack: [
-                          { text: "Ponto de geração: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Resíduos Gerados: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Quantificação: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de acondicionamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de armazenamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Tratamento/Destinação: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Coleta interna: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pelo transporte:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pela disposição final:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                    ],
-                    // ...wastesClassIIa,
-                  ],
-                },
-              },
+            text: [
+              { text: "GRUPO B – ", bold: true },
+              "Devem ser acondicionados em bombonas ou recipientes plásticos contendo a identificação e simbologia de Resíduo Perigoso (químico). ",
             ],
           },
           {
-            lineHeight: 1.2,
             marginTop: 15,
-            fontSize: 10,
-            stack: [
-              {
-                pageBreak: "before",
-                table: {
-                  widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
-                  headerRows: 3,
-                  dontBreakRows: true,
-                  body: [
-                    [
-                      {
-                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
-                        colSpan: 9,
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        text: "A) RESÍDUOS RECICLÁVEIS (CLASSE IIB)",
-                        colSpan: 5,
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      {
-                        stack: [
-                          {
-                            columns: [
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -4,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "SIM",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              !wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -2,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "NÃO",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
-                                style: "tableBody",
-                                width: "*",
-                              },
-                            ],
-                          },
-                        ],
-                        colSpan: 4,
-                      },
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        stack: [
-                          { text: "Ponto de geração: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Resíduos Gerados: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Quantificação: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de acondicionamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de armazenamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Tratamento/Destinação: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Coleta interna: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pelo transporte:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pela disposição final:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                    ],
-                    // ...wastesClassIIb,
-                  ],
-                },
-              },
+            text: [
+              { text: "GRUPO C – ", bold: true },
+              "Fontes radioativas devem seguir as determinações da Comissão Nacional de Energia Nuclear (CNEM).",
+            ],
+          },
+          {
+            marginTop: 15,
+            text: [
+              { text: "GRUPO D – ", bold: true },
+              "Os resíduos recicláveis não contaminados devem ser acondicionados em sacos plásticos coloridos (azul – papel; amarelo – metal; vermelho – plástico; verde – vidro) e em recipientes com nome e simbologia de Resíduo Reciclável.  Os resíduos orgânicos e não recicláveis devem ser acondicionados em sacos plásticos de cor marrom ou cinza, e em recipientes identificados com nome e simbologia de Resíduo Não-Reciclável.",
+            ],
+          },
+          {
+            marginTop: 15,
+            text: [
+              { text: "GRUPO E – ", bold: true },
+              "Devem ser acondicionados em recipientes identificados com nome e simbologia, rígidos, providos com tampa, resistentes à punctura, ruptura e vazamento. Os recipientes devem ser substituídos de acordo com a demanda ou quando o nível de preenchimento atingir 3/4 da capacidade ou de acordo com as instruções do fabricante, sendo proibidos seu esvaziamento manual e seu reaproveitamento.",
             ],
           },
         ],
