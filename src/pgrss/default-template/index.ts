@@ -26,15 +26,40 @@ import {
   phoneMask,
   setUpAddress,
 } from "../../utils";
-import { IRenderReq } from "../../types/template/interface";
+import {
+  IHealthWasteClassLabel,
+  IRenderReq,
+} from "../../types/template/interface";
 import {
   IDocumentCompanyLicense,
+  IDocumentHealthAdditions,
+  IDocumentHealthAdditionsParsed,
+  IDocumentHealthAdditionsStorageParsed,
+  IDocumentHealthWasteClassA,
+  IDocumentHealthWasteClassE,
   IDocumentWaste,
 } from "../../types/document/interface";
 import {
+  DocumentHealthAdditionsQuestionType,
+  DocumentHealthAdditionsSanitizationProducts,
+  DocumentHealthSanitizationType,
+  DocumentHealthWasteClass,
   DocumentWasteClass,
   DocumentWasteCompanyLicense,
 } from "../../types/document/enum";
+import { groupKeyMap } from "../../types/template/utils";
+import {
+  DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_DOOR_LOCK_SYSTEM,
+  DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_MATERIALS_USED,
+  DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PROCEDURES,
+  DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PRODUCTS,
+  DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PROTECTION_GEAR,
+  DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_VENTILATION,
+  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT,
+  DOCUMENT_HEALTH_WASTE_PACKING,
+  DOCUMENT_HEALTH_WASTE_PUTRESCIBLE_COOLING_SYSTEM,
+  DOCUMENT_HEALTH_WASTE_PUTRESCIBLE_DESCRIPTION,
+} from "../../types/document/resource";
 
 export const FIELD_EMPTY = "- ";
 
@@ -63,6 +88,72 @@ const thinBorderLayout: TableLayout = {
   },
 };
 
+function parseHealthAdditions(
+  data?: IDocumentHealthAdditions
+): IDocumentHealthAdditionsParsed | undefined {
+  if (!data) return undefined;
+
+  const { homeCare, sanitization, storage } = data;
+
+  const parsedSanitizationItems = sanitization.items.reduce((acc, item) => {
+    const { type, ...restItem } = item;
+
+    acc[type] = {
+      ...restItem,
+      type,
+    };
+
+    return acc;
+  }, {} as Omit<IDocumentHealthAdditionsParsed["sanitization"], "effluent">);
+
+  const parsedStorage = storage?.questions?.reduce((acc, item) => {
+    const { type, ...restItem } = item;
+
+    switch (type) {
+      case DocumentHealthAdditionsQuestionType.FLOOR_DRAIN:
+        return { ...acc, floorDrain: { ...restItem, type } };
+      case DocumentHealthAdditionsQuestionType.COVERAGE:
+        return { ...acc, coverage: { ...restItem, type } };
+      case DocumentHealthAdditionsQuestionType.VENTILATION:
+        return { ...acc, ventilation: { ...restItem, type } };
+      case DocumentHealthAdditionsQuestionType.ILLUMINATION:
+        return { ...acc, illumination: { ...restItem, type } };
+      case DocumentHealthAdditionsQuestionType.DOOR_LOCK_SYSTEM:
+        return { ...acc, doorLockSystem: { ...restItem, type } };
+      case DocumentHealthAdditionsQuestionType.PROTECTED_FLOOR_MATERIALS:
+        return {
+          ...acc,
+          protectedFloorMaterials: { ...restItem, type },
+        };
+    }
+  }, {} as any) as Omit<
+    IDocumentHealthAdditionsStorageParsed,
+    | "shared"
+    | "exists"
+    | "wasteClasses"
+    | "wasteTypesIdentification"
+    | "wasteByType"
+    | "area"
+  >;
+
+  return {
+    homeCare,
+    sanitization: {
+      effluent: sanitization.effluent,
+      ...parsedSanitizationItems,
+    },
+    storage: {
+      exists: storage.exists,
+      wasteClasses: storage.wasteClasses,
+      wasteTypesIdentification: storage.wasteTypesIdentification,
+      wasteByType: storage.wasteByType,
+      area: storage.area,
+      shared: storage.shared,
+      ...parsedStorage,
+    },
+  };
+}
+
 export function render({
   classifications,
   document,
@@ -74,6 +165,80 @@ export function render({
   const wastesClassIIb: TableCell[][] = [];
   const companys: TableCell[][] = [];
   const timeline: TableCell[][] = [];
+
+  const groups: IHealthWasteClassLabel = {};
+  const parsedHealthAdditions = parseHealthAdditions(document.healthAdditions);
+
+  if (document.healthWastes) {
+    for (let i = 0; i < document.healthWastes.length; i++) {
+      const currentWaste = document.healthWastes[i];
+      const groupType = currentWaste.group as DocumentHealthWasteClass;
+      const key = groupKeyMap[groupType];
+
+      if (key === "groupA") {
+        groups[key] = currentWaste as IDocumentHealthWasteClassA;
+      } else if (key === "groupE") {
+        groups[key] = currentWaste as IDocumentHealthWasteClassE;
+      } else {
+        groups[key] = currentWaste;
+      }
+    }
+  }
+
+  const { groupA, groupB, groupC, groupDNR, groupDR, groupE } = groups;
+
+  const sanitizationItemContainer =
+    document.healthAdditions?.sanitization?.items?.find(
+      (item) => item.type === DocumentHealthSanitizationType.CONTAINER
+    );
+
+  const resultSanitizationItemContainer =
+    sanitizationItemContainer?.product !== undefined
+      ? sanitizationItemContainer.product ===
+        DocumentHealthAdditionsSanitizationProducts.OTHER
+        ? sanitizationItemContainer.otherProduct ?? FIELD_EMPTY
+        : DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PRODUCTS(
+            sanitizationItemContainer.product
+          )
+      : FIELD_EMPTY;
+
+  const sanitizationItemInternal =
+    document.healthAdditions?.sanitization?.items?.find(
+      (item) => item.type === DocumentHealthSanitizationType.INTERNAL_STORAGE
+    );
+
+  const resultSanitizationItemInternal =
+    sanitizationItemInternal?.product !== undefined
+      ? sanitizationItemInternal.product ===
+        DocumentHealthAdditionsSanitizationProducts.OTHER
+        ? sanitizationItemInternal.otherProduct ?? FIELD_EMPTY
+        : DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PRODUCTS(
+            sanitizationItemInternal.product
+          )
+      : FIELD_EMPTY;
+
+  const wasteFrequencyContainer =
+    document.healthAdditions?.sanitization?.items?.find(
+      (item) => item.type === DocumentHealthSanitizationType.CONTAINER
+    )?.frequency !== undefined
+      ? DOCUMENT_FREQUENCY(
+          document.healthAdditions.sanitization.items.find(
+            (item) => item.type === DocumentHealthSanitizationType.CONTAINER
+          )!.frequency!
+        )
+      : FIELD_EMPTY;
+
+  const wasteFrequencyInternal =
+    document.healthAdditions?.sanitization?.items?.find(
+      (item) => item.type === DocumentHealthSanitizationType.INTERNAL_STORAGE
+    )?.frequency !== undefined
+      ? DOCUMENT_FREQUENCY(
+          document.healthAdditions.sanitization.items.find(
+            (item) =>
+              item.type === DocumentHealthSanitizationType.INTERNAL_STORAGE
+          )!.frequency!
+        )
+      : FIELD_EMPTY;
 
   function getCompanyWastes(
     wastes: IDocumentWaste[]
@@ -1039,58 +1204,624 @@ export function render({
             marginTop: 20,
           },
           {
-            marginTop: 15,
-            text: [
-              { text: "GRUPO A – ", bold: true },
-              "Devem ser acondicionados em sacos branco leitosos, com identificação e simbologia de Resíduo Infectante. Os sacos devem ser substituídos ao atingirem o limite de 2/3 (dois terços) de sua capacidade ou então a cada 48 (quarenta e oito) horas, independentemente do volume, visando o conforto ambiental e a segurança dos usuários e profissionais.",
+            marginLeft: 15,
+            ul: [
+              "Pontos de geração:",
+              "Empresa responsável pela coleta e destinação:",
             ],
           },
           {
-            marginTop: 15,
-            text: [
-              { text: "GRUPO B – ", bold: true },
-              "Devem ser acondicionados em bombonas ou recipientes plásticos contendo a identificação e simbologia de Resíduo Perigoso (químico). ",
-            ],
-          },
-          {
-            marginTop: 15,
-            text: [
-              { text: "GRUPO C – ", bold: true },
-              "Fontes radioativas devem seguir as determinações da Comissão Nacional de Energia Nuclear (CNEM).",
-            ],
-          },
-          {
-            marginTop: 15,
-            text: [
-              { text: "GRUPO D – ", bold: true },
-              "Os resíduos recicláveis não contaminados devem ser acondicionados em sacos plásticos coloridos (azul – papel; amarelo – metal; vermelho – plástico; verde – vidro) e em recipientes com nome e simbologia de Resíduo Reciclável.  Os resíduos orgânicos e não recicláveis devem ser acondicionados em sacos plásticos de cor marrom ou cinza, e em recipientes identificados com nome e simbologia de Resíduo Não-Reciclável.",
-            ],
-          },
-          {
-            marginTop: 15,
-            text: [
-              { text: "GRUPO E – ", bold: true },
-              "Devem ser acondicionados em recipientes identificados com nome e simbologia, rígidos, providos com tampa, resistentes à punctura, ruptura e vazamento. Os recipientes devem ser substituídos de acordo com a demanda ou quando o nível de preenchimento atingir 3/4 da capacidade ou de acordo com as instruções do fabricante, sendo proibidos seu esvaziamento manual e seu reaproveitamento.",
+            stack: [
+              {
+                table: {
+                  widths: [120, 200, "*"],
+                  headerRows: 2,
+                  body: [
+                    [
+                      {
+                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO ESTABELECIMENTO",
+                        style: "headerTable",
+                        colSpan: 3,
+                      },
+                      "",
+                      "",
+                    ],
+                    [
+                      {
+                        text: "GRUPO DE RESÍDUOS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        text: "A – POTENCIALMENTE INFECTANTES",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "bodyTable",
+                                bold: true,
+                                width: 110,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupA ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupA ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: "Se assinalar sim, complete o quadro abaixo:",
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos gerados: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: `- ${groupA?.names?.join(", ") ?? FIELD_EMPTY}`,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Pontos de geração de RSS: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupA?.originPoints !== undefined
+                            ? `- ${groupA?.originPoints
+                                .map((origin) =>
+                                  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(origin)
+                                )
+                                .join(", ")}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Forma de acondicionamento: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupA?.packing !== undefined
+                            ? `- ${DOCUMENT_HEALTH_WASTE_PACKING(
+                                groupA?.packing
+                              )}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Quantificação dos resíduos: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupA?.quantity !== undefined
+                            ? `- ${groupA?.quantity} ${DOCUMENT_WASTE_UNIT(
+                                groupA?.unit
+                              )}/${DOCUMENT_WASTE_FREQUENCY(
+                                groupA.frequency!
+                              )} `
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Coleta externa: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Frequência de coleta externa:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupA?.collectionFrequency !== undefined
+                              ? DOCUMENT_FREQUENCY(groupA?.collectionFrequency)
+                              : ""
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa executora do transporte:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupA?.companyTransport ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupA?.companyTransport ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupA?.companyTransport
+                                )
+                              : groupA?.companiesTransport
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Tratamento externo: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Tecnologia utilizada:",
+                            bold: true,
+                          },
+                          `\n ${
+                            groupA?.treatment !== undefined
+                              ? `- ${DOCUMENT_WASTE_TREATMENT(
+                                  groupA?.treatment
+                                )}`
+                              : FIELD_EMPTY
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        // empresa b
+                        text: [
+                          {
+                            text: "Razão Social da empresa executora do tratamento:",
+                            bold: true,
+                          },
+                          `\n- ${
+                            groupA?.companyDestination ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupA?.companyDestination ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupA?.companyDestination
+                                )
+                              : groupA?.companiesDestination
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        // empresa b
+                        text: "Disposição final: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa receptora final dos resíduos:",
+                            bold: true,
+                          },
+                          `\n- ${
+                            groupA?.companyDestination ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupA?.companyDestination ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupA?.companyDestination
+                                )
+                              : groupA?.companiesDestination
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+
+                        style: "bodyTable",
+                        colSpan: 2,
+                      },
+                      "",
+                    ],
+
+                    [
+                      {
+                        text: "RESÍDUOS INFECTANTES DE RÁPIDA PUTREFAÇÃO",
+                        style: "headerTable",
+                        colSpan: 2,
+                      },
+                      "",
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "bodyTable",
+                                bold: true,
+                                width: 110,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupA ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupA ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: "Se assinalar sim, complete o quadro abaixo:",
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        colSpan: 2,
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Possui sistema de refrigeração:",
+                                style: "boldBodyTable",
+                                width: 150,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(
+                                                groupA?.putrescible
+                                                  ?.coolingSystem ?? {}
+                                              ).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(
+                                                groupA?.putrescible
+                                                  ?.coolingSystem ?? {}
+                                              ).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "",
+                      {
+                        text: [
+                          {
+                            text: "Se SIM, esclareça qual o sistema utilizado:",
+                            bold: true,
+                          },
+                          `\n- ${
+                            groupA?.putrescible?.coolingSystem.systemUsed !==
+                            undefined
+                              ? DOCUMENT_HEALTH_WASTE_PUTRESCIBLE_COOLING_SYSTEM(
+                                  groupA?.putrescible?.coolingSystem.systemUsed
+                                )
+                              : ""
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: [
+                          {
+                            text: "Descrever os resíduos de rápida putrefação gerados no estabelecimento:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupA?.putrescible?.descriptions !== undefined
+                              ? groupA?.putrescible?.descriptions
+                                  .map((description) =>
+                                    DOCUMENT_HEALTH_WASTE_PUTRESCIBLE_DESCRIPTION(
+                                      description
+                                    )
+                                  )
+                                  .join(", ")
+                              : ""
+                          }`,
+                        ],
+                        style: "bodyTable",
+                        colSpan: 3,
+                      },
+                      "",
+                      "",
+                    ],
+                    [
+                      {
+                        text: [
+                          {
+                            text: "Descrever os procedimentos de acondicionamento (características do saco plástico ou recipiente, coleta interna, armazenamento, coleta externa (freqüência e responsável), tecnologia de tratamento e disposição final:\n",
+                            bold: true,
+                          },
+                          `-${
+                            document.approved?.putresciblePackingProcedure ?? ""
+                          }`,
+                        ],
+                        style: "bodyTable",
+                        colSpan: 3,
+                      },
+                      "",
+                      "",
+                    ],
+                    [
+                      {
+                        text: "IMPORTANTE!!!!",
+                        style: "boldBodyTable",
+                        colSpan: 3,
+                        fillColor: "#D9D9D9",
+                        border: [true, true, true, false],
+                      },
+                      "",
+                      "",
+                    ],
+                    [
+                      {
+                        colSpan: 3,
+                        style: "bodyTable",
+                        fillColor: "#D9D9D9",
+                        border: [true, false, true, true],
+                        ul: [
+                          "Os resíduos de fácil putrefação devem ser encaminhados para coleta externa no período máximo de 24 horas, se este tempo for ultrapassado estes deverão ser mantidos em equipamento refrigerado.",
+                        ],
+                      },
+                      "",
+                      "",
+                    ],
+                  ],
+                },
+              },
             ],
           },
         ],
       },
       {
+        style: ["text-justify"],
         pageBreak: "before",
         pageOrientation: "portrait",
-        style: ["text-justify"],
         stack: [
           {
-            text: "5    FASE II – PLANEJAMENTO DO GERENCIAMENTO DE RESÍDUOS",
+            text: "5.2 COLETA INTERNA",
             style: ["bold"],
           },
           {
-            text: "5.1 LOGÍSTICA DO GERENCIAMENTO PROPOSTO",
-            marginTop: 30,
-            style: ["bold"],
+            text: "De acordo com Resoluções RDC – ANVISA nº 222/2018, CONAMA nº 358/2005 e normas pertinentes da ABNT e do município sede do estabelecimento, deve-se:",
+            marginTop: 20,
           },
           {
-            text: "Visando a efetividade do processo de implementação, propõe-se pela adoção de ilhas de coleta, consistindo de um conjunto de coletores apropriados para cada setor (local de geração), estrategicamente localizado.",
+            marginTop: 15,
+            text: [
+              " ",
+              "          1)   Durante o manuseio dos resíduos o funcionário deverá utilizar os seguintes equipamentos de proteção individual: óculos de proteção, bota de segurança, luvas de PVC ou borracha, impermeáveis, resistentes, de cor clara, antiderrapantes e de cano longo; avental: de PVC, impermeável e de médio comprimento. Após a coleta interna, o funcionário deve lavar as mãos ainda enluvadas, retirando as luvas e colocando-as em local apropriado. O funcionário deve lavar as mãos antes de calçar as luvas e depois de retirá-las.",
+            ],
+          },
+          {
+            text: [
+              " ",
+              "         2)   Em caso de ruptura das luvas, o funcionário deve descartá-las imediatamente, não as reutilizando.",
+            ],
+          },
+          {
+            text: [
+              " ",
+              "          3)   Estes equipamentos de proteção individual devem ser lavados e desinfetados diariamente. Sempre que houver contaminação com material infectante, devem ser substituídos imediatamente, lavados e esterilizados.",
+            ],
+          },
+          {
+            text: "As pessoas envolvidas com o manuseio de resíduos devem ser submetidas a exame admissional, periódico, de retorno ao trabalho, mudança de função e demissional. ",
             marginTop: 15,
           },
           {
@@ -1102,317 +1833,87 @@ export function render({
             text: "Os coletores foram dimensionados de acordo com as quantidades geradas em cada fonte, peso específico e frequência de remoção, permitindo determinar os tipos mais apropriados de coletores, quantidades e dimensões.",
             marginTop: 15,
           },
-        ],
-      },
-      {
-        style: ["text-justify"],
-        pageBreak: "before",
-        stack: [
-          {
-            text: "5.2 COLETA INTERNA",
-            style: ["bold"],
-          },
-          {
-            text: "As pessoas envolvidas com o manuseio de resíduos devem ser submetidas a exame admissional, periódico, de retorno ao trabalho, mudança de função e demissional. Os exames e avaliações que devem ser submetidas são: Anamnese ocupacional, Exame físico, exame mental. Os funcionários também devem ser vacinados contra tétano, hepatite e outras considerações importantes pela Vigilância Sanitária.",
-            marginTop: 30,
-          },
           {
             text: "Logística de remoção e coleta",
             marginTop: 15,
             style: ["bold"],
           },
           {
-            text: "Deverão utilizar equipamentos de proteção individual, como luvas de material resistente, óculos de proteção, gorro, máscara de proteção, uniforme de tecido resistente e avental impermeável por cima e botas de borracha.",
+            text: "Descrição de rotinas e utilização de EPIs:",
+            marginTop: 15,
+          },
+          {
+            text: "Funcionários encarregados no manejo dos resíduos de serviço de saúde deverão utilizar equipamentos de proteção individual, conforme NR-32, sendo luvas de material resistente, óculos de proteção, máscara de proteção, uniforme de tecido resistente e avental impermeável por cima e botas de borracha.",
+            marginTop: 15,
+          },
+          {
+            text: "Os funcionários deverão transportar os resíduos dos Grupos A e E, B, D separadamente, considerar a compatibilidade química dos resíduos e não transportar juntas substâncias que possam resultar em reação química violenta.",
+            marginTop: 15,
+          },
+          {
+            text: "As coletas dos resíduos do Grupo A e E e dos resíduos do Grupo B devem ser realizadas em um turno único, evitando uma possível contaminação com os resíduos de outros grupos.",
             marginTop: 15,
           },
           {
             text: "Não arrastar no solo os recipientes, e os sacos plásticos; aproximar o carro coletor o máximo possível do lugar de onde se deve recolher os recipientes. Não transferir os resíduos acondicionados de um recipiente para outro; no recolhimento dos sacos, os funcionários devem levantá-los e mantê-los distantes do corpo, a fim de evitar cortes e possíveis acidentes com materiais perfuro cortantes, indevidamente acondicionados.",
             marginTop: 15,
           },
-        ],
-      },
-      {
-        style: ["text-justify"],
-        pageBreak: "before",
-        stack: [
           {
-            text: "5.3 EDUCAÇÃO AMBIENTAL",
+            text: "5.2 ARMAZENAMENTO – ABRIGO EXTERNO",
             style: ["bold"],
-          },
-          {
-            text: "REDUZIR",
-            marginTop: 25,
-            style: ["bold"],
-          },
-          {
-            text: "A partir do ideal de produzir com qualidade e de se manter um equilíbrio entre as receitas e despesas, destacamos a necessidade de ser controlada a geração de resíduos na empresa. Esta realidade, além de gerar preocupações com a possibilidade de pagamentos de multas ambientais, é um item que possibilita o equilíbrio ideal entre o custo para se produzir e o lucro gerado.",
             marginTop: 15,
           },
           {
-            text: "Dicas de Redução de resíduos:",
-            marginTop: 25,
-            style: ["bold"],
-          },
-          {
-            marginTop: 15,
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Melhorar o controle da qualidade pela compra de equipamentos e/ou matérias-primas mais eficientes;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Melhorar o treinamento de funcionários e implementação de sistemas de monitoramento da qualidade;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Procurar alternativas menos tóxicas para produtos químicos, colas, desengraxantes, etc.;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Orientar fornecedores, solicitando que a embalagem desnecessária seja eliminada;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Adotar hábito requerendo impressão de todos (ou a maior parte) os documentos em ambos os lados da folha, pois esta atitude reduz o consumo de papel;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Colocar quadro de notícias em local central em cada departamento ou área de circulação comum, bem como aumentar o uso de correio eletrônico;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Reduzir a toxicidade das soluções de limpeza;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Comprar material de limpeza em recipientes retornáveis;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Substituir uso de trapos de malha/estopas por toalhas industriais laváveis, evitando a geração de resíduo perigoso (trapos contaminados) quando gerados;",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Adquirir óleo e demais produtos perigosos em embalagens maiores e/ou a granel, evitando excesso de embalagens contaminadas.",
-                marginLeft: 10,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        style: ["text-justify"],
-        pageBreak: "before",
-        stack: [
-          {
-            text: "REUTILIZAR",
-            style: ["bold"],
-          },
-          {
-            text: "Após serem consideradas e implementadas todas as opções de redução de resíduos, levando-se em conta a sua praticidade e viabilidade econômica, os resíduos restantes devem ser gerenciados, verificando a condição de retorno do resíduo ao processo de produção, seja substituindo a matéria-prima do processo ou processando o resíduo como subproduto.",
+            text: "Os resíduos deverão seguir os seguintes procedimentos ao serem transportados dentro do estabelecimento, de acordo com as Resoluções RDC – ANVISA nº 222/2018, CONAMA nº 358/2004 e normas pertinentes da ABNT e do município sede do estabelecimento.",
             marginTop: 15,
           },
           {
-            text: "Dicas de Reutilização de resíduos:",
-            marginTop: 25,
-            style: ["bold"],
-          },
-          {
-            marginTop: 15,
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
+            stack: [
               {
-                text: "Promover sistema de filtragem/decantação de produtos de limpeza (querosene, óleo diesel, etc.), permitindo prolongar utilização do mesmo;",
-                marginLeft: 10,
+                text: [
+                  "1)    ",
+                  "O abrigo de resíduos é constituído de um local fechado, exclusivo para guarda temporária de resíduos de serviços de saúde, devidamente acondicionados em recipientes.",
+                ],
+                marginTop: 15,
+              },
+              {
+                text: [
+                  "2)    ",
+                  "As dimensões do abrigo são suficientes para armazenar a produção de resíduos de até três dias, sem empilhamento dos recipientes acima de 1,20 m.",
+                ],
+                marginTop: 15,
+              },
+              {
+                text: [
+                  "3)    ",
+                  "O piso, paredes, porta e teto são de material liso, impermeável, lavável e de cor branca.",
+                ],
+                marginTop: 15,
+              },
+              {
+                text: [
+                  "4)    ",
+                  "A porta deve ostentar o símbolo de substância infectante.",
+                ],
+                marginTop: 15,
+              },
+              {
+                text: [
+                  "5)    ",
+                  "O abrigo de resíduo deve ser higienizado após a coleta externa ou sempre que ocorrer derramamento.",
+                ],
+                marginTop: 15,
               },
             ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Usar reutilizáveis de preferência, evitando os descartáveis (por exemplo: baterias recarregáveis)",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Criar blocos para rascunho com papel usado de um lado.",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Devolver ao fabricante os cartuchos de impressora já usados, no momento da compra de um novo.",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Observar sempre que aplicável a devolução de pilhas e baterias aos fabricantes.",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            columns: [
-              { image: "checkImg", width: 8, marginTop: 2 },
-              {
-                text: "Solicitar aos fornecedores que enviem os pedidos em embalagem retornável (por ex., bombonas e tambores de produtos químicos, graxa, óleo retornáveis, reutilizáveis e reabastecíveis).",
-                marginLeft: 10,
-              },
-            ],
-          },
-          {
-            text: "RECICLAR",
-            marginTop: 25,
-            style: ["bold"],
-          },
-          {
-            marginTop: 15,
-            text: "Em terceiro lugar vem a Reciclagem. A reciclagem é a transformação de um resíduo em um produto novo. Esta transformação geralmente acaba gerando também resíduos! Por isso ela vem em 3º lugar na escala dos 3R´s.",
-          },
-          {
-            marginTop: 15,
-            text: "A Reciclagem trata o lixo como matéria-prima a ser transformada para fazer novos produtos. O componente ambiental é, sem dúvida, o aspecto de maior peso no balanço custo/benefício da reciclagem. O benefício ambiental será alcançado através da exploração, em menor escala, dos recursos como matéria-prima de um novo processo de industrialização. Essa medida é favorável ao equilíbrio ambiental, uma vez que água, energia e matéria-prima serão economizados, assim como o espaço será poupado nos locais de destino final dos resíduos.",
-          },
-          {
-            marginTop: 15,
-            text: "Ressalta-se que a identificação e o planejamento das ações que venham a ser desencadeadas no processo de redução de resíduos deve ser uma meta contínua da empresa, onde a “Comissão de Gestão de Resíduos” ocupa papel importante, motivando os demais colaboradores do setor a apresentarem ideias e projetos que visem a redução. ",
-          },
-          {
-            marginTop: 25,
-            text: "5.4 AÇÕES PREVENTIVAS, CORRETIVAS E DE CONTROLE NO MANEJO DE RESÍDUOS",
-            style: ["bold"],
-          },
-          {
-            marginTop: 25,
-            text: "6.4.1 Avaliação e Monitoramento do PGRS",
-            style: ["bold"],
-          },
-          {
-            marginTop: 15,
-            text: "Processo de Gestão",
-            decoration: "underline",
-          },
-          {
-            marginTop: 15,
-            text: "Para a avaliação, o monitoramento e o gerenciamento dos resíduos recomendam-se o controle via SINIR. Esta sistemática, permite uma avaliação quali-quantitativa dos resíduos sólidos gerados, de forma contínua, demonstrando as formas de destinação final adotadas",
-          },
-          {
-            marginTop: 15,
-            text: "Destinação Final",
-            decoration: "underline",
-          },
-          {
-            marginTop: 15,
-            text: "O gerenciamento adequado dos resíduos sólidos vai além do controle interno: é necessário garantir que os fornecedores estejam trabalhando de forma sincronizada com a legislação e com os interesses ambientais da empresa.",
-          },
-          {
-            marginTop: 15,
-            text: "Desta forma, é importante que seja realizada uma avaliação inicial para a contratação e/ou renovação de contrato do receptor de resíduos e auditorias periódicas nos mesmos. Os procedimentos sugeridos formam a base para a administração, manutenção e a divulgação do PGRS. Entretanto, é interessante lembrar que a empresa pode adotar outras medidas internas, e com os seus parceiros, adequadas ao propósito de evoluir na melhoria do aproveitamento da matéria-prima e disposição final no meio ambiente.",
-          },
-          {
-            marginTop: 15,
-            text: "Ressaltamos que uma postura proativa dos dirigentes da empresa é fundamental para manter e ampliar os resultados positivos das ações implantadas.",
-          },
-          {
-            marginTop: 25,
-            text: "6.5 TREINAMENTO E SENSIBILIZAÇÃO",
-            style: ["bold"],
-          },
-          {
-            marginTop: 15,
-            text: "Um dos fatores mais importantes para o sucesso do Plano de Gerenciamento de Resíduos Sólidos - PGRS é o treinamento contínuo, pois somente através da equipe consciente e comprometida, consegue-se atingir os objetivos pretendidos. Para tanto, os treinamentos devem abordar temas relacionados à sensibilização quanto às atitudes ambientalmente corretas, as formas de tratamento e disposição final dos resíduos e os procedimentos a serem adotados pela empresa. Todos os colaboradores devem ser envolvidos, inclusive os terceirizados, para que haja uma efetiva implementação e manutenção do PGRS.",
-          },
-          {
-            marginTop: 15,
-            text: [
-              "Todos os colaboradores da empresa ",
-              {
-                text: document.company?.name ?? FIELD_EMPTY,
-                style: ["bold"],
-              },
-              " receberam treinamento online sobre a correta gestão dos resíduos do Serviço de Saúde, contemplando:",
-            ],
-          },
-          {
             marginLeft: 15,
-            ul: [
-              "O que são resíduos sólidos;",
-              "Formas de acondicionamento dos Resíduos;",
-              "Coleta Seletiva;",
-              "Tratamentos e disposição final de Resíduos;",
-              "Educação ambiental: 3Rs e sustentabilidade;",
-              "Responsabilidade ambiental.",
-            ],
           },
           {
+            text: "O abrigo externo deve ser dividido e devidamente identificado em abrigo para “RESÍDUO RECICLÁVEL”, “RESÍDUO INFECTANTE”, “RESÍDUO QUÍMICO” E “RESÍDUO NÃO RECICLÁVEL”. ",
             marginTop: 15,
-            text: "Cabe salientar que o processo de sensibilização não deve ser estático, sofrendo atualizações sempre que necessário e estabelecendo a continuidade do mesmo, para que resultem nos efeitos pretendidos.",
           },
           {
+            text: "As instalações internas o abrigo de “RESÍDUO INFECTANTE” deve ser de pisos e paredes laváveis, na cor clara; devidamente lacrados para impedir o acesso de pessoas estranhas e possuem instalações de água para a higienização do abrigo externo das lixeiras e containers de transporte.",
             marginTop: 15,
-            text: "Ressalta-se que o treinamento específico, quanto aos procedimentos, deve ser repassado a todos os colaboradores, inclusive aos terceirizados e prestadores de serviços, através do grupo de multiplicadores, conforme periodicidade a ser definida.",
-          },
-          {
-            marginTop: 15,
-            text: "Para a obtenção dos propósitos desejados em qualquer que seja o projeto, é imprescindível um bom plano de marketing interno, o que vem a contribuir com o processo de sensibilização e treinamento proporcionados.",
           },
         ],
       },
@@ -1421,63 +1922,12 @@ export function render({
         pageBreak: "before",
         stack: [
           {
-            text: "5.6 PROGNÓSTICO DOS IMPACTOS SÓCIO-ECONÔMICOS E AMBIENTAIS DO PLANO PROPOSTO",
-            style: ["bold"],
-          },
-          {
-            text: "Avaliação do ponto de vista social:",
+            text: "5.7 DESTINAÇÃO FINAL",
             style: ["bold"],
             marginTop: 25,
           },
           {
-            text: "Aliado a redução de custos financeiros, cabe salientar os ganhos que advém da coleta seletiva, quando da existência de um efetivo plano de gerenciamento de resíduos. Agregando valor aos resíduos, o qual resulta no fomento para o segmento dos sucateiros e para a indústria de reciclagem, permite a geração de novos empregos, beneficiando principalmente a classe de menor renda.",
-            marginTop: 15,
-          },
-          {
-            text: "A doação de resíduos por sua vez também se mostra bastante interessante do ponto de vista social, pois vem a beneficiar diversas famílias, onde o sustento advém exclusivamente dos materiais recicláveis. Atualmente existem Cooperativas e Associações de Catadores, as quais podem ser parceiras da empresa.",
-            marginTop: 15,
-          },
-          {
-            text: "Avaliação do ponto de vista econômico:",
-            marginTop: 15,
-            style: ["bold"],
-          },
-          {
-            text: "Considerando a prática da doação de parte dos resíduos recicláveis, a receita auferida a título de venda de resíduos é muito incipiente.",
-            marginTop: 15,
-          },
-          {
-            text: "Por outro lado, fica evidente a necessidade de reduzir a geração de resíduos perigosos, em especial os trapos de malha contaminados com óleo, os quais terão custos de transporte e destinação final ambientalmente adequados. Caso os trapos de malha venham a ser substituídos por toalhas industriais laváveis, este custo deixa de existir, todavia, apresenta-se um novo custo referente ao serviço da lavanderia, o que normalmente resulta em um equilíbrio financeiro entre a situação atual e a situação proposta. Porém o mais importante é o reflexo positivo do ponto de vista ambiental",
-            marginTop: 15,
-          },
-          {
-            text: "Avaliação do ponto de vista ambiental:",
-            style: ["bold"],
-            marginTop: 15,
-          },
-          {
-            text: "Considerando a utilização de Aterros, é de relevada importância que medidas sejam implantadas, permitindo prolongar sua vida útil, minimizando as quantidades de resíduos a serem dispostas no mesmo. Desta forma é imprescindível a disposição no mesmo somente daqueles resíduos que não apresentam outras opções de tratamento e/ou disposição finais mais apropriados.",
-            marginTop: 15,
-          },
-          {
-            text: "Procura-se através do respectivo plano, maximizar o processo de reciclagem, buscando sempre agregar maior valor aos resíduos, tendo como meta principal a redução nas quantidades geradas ou até mesmo a substituição por produtos menos nocivos, também como uma forma de redução dos resíduos perigosos.",
-            marginTop: 15,
-          },
-          {
-            text: "O PGRS proposto orienta no sentido de buscar as melhores formas de destinação ou tecnologias existentes, do ponto de vista ambiental, técnico e socioeconômico.",
-            marginTop: 15,
-          },
-          {
-            text: "Propõe-se o incremento no processo de reciclagem, que dentre todos os benefícios proporcionados, o maior deles ainda é a preservação dos tão escassos recursos naturais, que vem sendo explorados de maneira insustentável.",
-            marginTop: 15,
-          },
-          {
-            text: "5.7 DESTINAÇAO FINAL",
-            style: ["bold"],
-            marginTop: 25,
-          },
-          {
-            text: "A tabela abaixo descreve quem são as empresas responsáveis pela coleta, tratamento e destinação final dos Resíduos conforme apresentados no item 4.2 deste PGRS.",
+            text: "A tabela abaixo descreve quem são as empresas responsáveis pela coleta, tratamento e destinação final dos RSS conforme apresentados no item 3 deste PGRSS.",
             marginTop: 15,
             fontSize: 12,
           },
@@ -1539,15 +1989,1747 @@ export function render({
       },
       {
         pageBreak: "before",
+        pageOrientation: "landscape",
+        lineHeight: 1.3,
         stack: [
           {
-            text: "5.8 CRONOGRAMA DE REVISÃO E ATUALIZAÇÃO DO PGRS",
+            text: "6   ROTINA DE LIMPEZA E HIGIENIZAÇÃO DOS RECIPIENTES DE ACONDICIONAMENTO DOS RESÍDUOS E ABRIGO EXTERNO",
+            style: ["bold", "center"],
+          },
+          {
+            text: "As cestas de resíduo com tampa situadas em cada setor deverão ser higienizadas semanalmente com sabão e água e desinfetadas com hipoclorito de sódio a 1%. O carro utilizado no transporte dos resíduos deverá também ser higienizado diariamente com sabão e água e desinfetados com hipoclorito de sódio a 1%. O abrigo externo destinado à coleta deverá ser higienizado com água corrente e sabão e desinfecção com Hipoclorito de sódio a 1 %.",
+            marginTop: 25,
+          },
+          {
+            margin: [0, 30, 0, 10],
+            table: {
+              widths: [150, "*"],
+              headerRows: 1,
+              body: [
+                [
+                  {
+                    text: "ROTINA DE LIMPEZA E HIGIENIZAÇÃO DOS RECIPIENTES DE ACONDICIONAMENTO DOS RESÍDUOS",
+                    style: "headerTable",
+                    colSpan: 2,
+                  },
+                  "",
+                ],
+                [
+                  {
+                    text: "Lixeiras, carrinhos de coleta,  containers",
+                    style: "headerTable",
+                    rowSpan: 4,
+                    margin: [0, 8, 0, 0],
+                  },
+                  {
+                    text: [
+                      {
+                        text: "Frequência de Limpeza: ",
+                        bold: true,
+                      },
+                      wasteFrequencyContainer,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  "",
+                  {
+                    text: [
+                      {
+                        text: "Produtos Utilizados: ",
+                        bold: true,
+                      },
+                      resultSanitizationItemContainer,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  "",
+                  {
+                    text: [
+                      {
+                        text: "EPI’s Utilizados: ",
+                        bold: true,
+                      },
+                      document.healthAdditions?.sanitization?.items?.find(
+                        (item) =>
+                          item.type === DocumentHealthSanitizationType.CONTAINER
+                      )?.protectionGear !== undefined
+                        ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PROTECTION_GEAR(
+                            document.healthAdditions?.sanitization?.items?.find(
+                              (item) =>
+                                item.type ===
+                                DocumentHealthSanitizationType.CONTAINER
+                            )?.protectionGear!
+                          )
+                        : FIELD_EMPTY,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  "",
+                  {
+                    text: [
+                      {
+                        text: "Procedimento de Limpeza: ",
+                        bold: true,
+                      },
+                      document.healthAdditions?.sanitization?.items?.find(
+                        (item) =>
+                          item.type === DocumentHealthSanitizationType.CONTAINER
+                      )?.procedure !== undefined
+                        ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PROCEDURES(
+                            document.healthAdditions?.sanitization?.items?.find(
+                              (item) =>
+                                item.type ===
+                                DocumentHealthSanitizationType.CONTAINER
+                            )!.procedure!
+                          )
+                        : FIELD_EMPTY,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  {
+                    text: "Abrigo de armazenamento interno (temporário) e/ou externo de resíduos",
+                    style: "headerTable",
+                    rowSpan: 4,
+                    margin: [0, 8, 0, 0],
+                  },
+                  {
+                    text: [
+                      {
+                        text: "Frequência de Limpeza: ",
+                        bold: true,
+                      },
+                      wasteFrequencyInternal,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  "",
+                  {
+                    text: [
+                      {
+                        text: "Produtos Utilizados: ",
+                        bold: true,
+                      },
+                      resultSanitizationItemInternal,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  "",
+                  {
+                    text: [
+                      {
+                        text: "EPI’s Utilizados: ",
+                        bold: true,
+                      },
+                      document.healthAdditions?.sanitization?.items?.find(
+                        (item) =>
+                          item.type ===
+                          DocumentHealthSanitizationType.INTERNAL_STORAGE
+                      )?.protectionGear !== undefined
+                        ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PROTECTION_GEAR(
+                            document.healthAdditions?.sanitization?.items?.find(
+                              (item) =>
+                                item.type ===
+                                DocumentHealthSanitizationType.INTERNAL_STORAGE
+                            )?.protectionGear!
+                          )
+                        : FIELD_EMPTY,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  "",
+                  {
+                    text: [
+                      {
+                        text: "Procedimento de Limpeza: ",
+                        bold: true,
+                      },
+                      document.healthAdditions?.sanitization?.items?.find(
+                        (item) =>
+                          item.type ===
+                          DocumentHealthSanitizationType.INTERNAL_STORAGE
+                      )?.procedure !== undefined
+                        ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_PROCEDURES(
+                            document.healthAdditions?.sanitization?.items?.find(
+                              (item) =>
+                                item.type ===
+                                DocumentHealthSanitizationType.INTERNAL_STORAGE
+                            )!.procedure!
+                          )
+                        : FIELD_EMPTY,
+                    ],
+                    style: "bodyTable",
+                  },
+                ],
+                [
+                  {
+                    colSpan: 2,
+                    stack: [
+                      {
+                        text: "O efluente da lavagem dos recipientes e do abrigo é direcionado para a rede coletora de esgoto?",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        columns: [
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                alignment: "left",
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          document.healthAdditions?.sanitization
+                                            .effluent.public
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "SIM",
+                                style: "bodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          !document.healthAdditions
+                                            ?.sanitization.effluent.public
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "NÃO",
+                                style: "bodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            text: [
+                              "Se ",
+                              {
+                                text: "NÃO",
+                                bold: true,
+                              },
+                              ", indicar o local encaminhado: ",
+                              `${
+                                document.healthAdditions?.sanitization.effluent
+                                  .public
+                                  ? " "
+                                  : document.healthAdditions?.sanitization
+                                      .effluent.destination
+                              }`,
+                            ],
+                            style: "bodyTable",
+                            width: "*",
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              ],
+            },
+          },
+          {
+            pageBreak: "before",
+            stack: [
+              {
+                table: {
+                  widths: [400, "*"],
+                  headerRows: 1,
+                  body: [
+                    [
+                      {
+                        text: "CARACTERÍSTICAS DO ABRIGO EXTERNO / LOCAL DE ARMAZENAMENTO",
+                        style: "headerTable",
+                        colSpan: 2,
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        colSpan: 2,
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Existe abrigo para armazenamento dos resíduos?",
+                                style: "boldBodyTable",
+                                width: 250,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage
+                                                .exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage
+                                                .exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        colSpan: 2,
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Quais tipos de resíduos são armazenados?",
+                                style: "boldBodyTable",
+                                width: 250,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage.wasteClasses?.includes(
+                                                DocumentHealthWasteClass.GROUP_A
+                                              )
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "Infectantes/perfurocortantes",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 150,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage.wasteClasses?.includes(
+                                                DocumentHealthWasteClass.GROUP_B
+                                              )
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "Químicos",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 70,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage.wasteClasses?.includes(
+                                                DocumentHealthWasteClass.GROUP_C
+                                              )
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "Radioativos",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 70,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage.wasteClasses?.includes(
+                                                DocumentHealthWasteClass.GROUP_D_NR
+                                              )
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "D-não-reciclável",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 100,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage.wasteClasses?.includes(
+                                                DocumentHealthWasteClass.GROUP_D_R
+                                              )
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "D-reciclável",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 70,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        colSpan: 2,
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "O abrigo possui identificação dos tipos de resíduos armazenados?",
+                                style: "boldBodyTable",
+                                width: 290,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage
+                                                .wasteTypesIdentification
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage
+                                                .wasteTypesIdentification
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        colSpan: 2,
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "O abrigo possui compartimentos específicos para cada resíduo armazenado?",
+                                style: "boldBodyTable",
+                                width: 350,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage
+                                                .wasteByType
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage
+                                                .wasteByType
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Os pisos e paredes são revestidos de material liso, lavável e impermeável?",
+                                style: "boldBodyTable",
+                                margin: [0, 0, 0, 0],
+                                width: 310,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.PROTECTED_FLOOR_MATERIALS
+                                              )
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.PROTECTED_FLOOR_MATERIALS
+                                              )
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "Não",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Cite o material utilizado: ",
+                            bold: true,
+                          },
+                          parsedHealthAdditions?.storage.protectedFloorMaterials
+                            ?.description
+                            ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_MATERIALS_USED(
+                                parsedHealthAdditions?.storage
+                                  .protectedFloorMaterials?.description
+                              )
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Possui cobertura?",
+                                style: "boldBodyTable",
+                                width: 100,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.COVERAGE
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.COVERAGE
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Cite o material utilizado: ",
+                            bold: true,
+                          },
+                          parsedHealthAdditions?.storage.coverage?.description
+                            ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_MATERIALS_USED(
+                                parsedHealthAdditions?.storage.coverage
+                                  .description
+                              )
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Possui ralo?",
+                                style: "boldBodyTable",
+                                width: 100,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.FLOOR_DRAIN
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.FLOOR_DRAIN
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "É ligado a rede de esgoto?",
+                                style: "boldBodyTable",
+                                width: 150,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.FLOOR_DRAIN
+                                              )?.public
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.FLOOR_DRAIN
+                                              )?.public
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Tem ventilação? ",
+                                style: "boldBodyTable",
+                                width: 100,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.VENTILATION
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.VENTILATION
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: [
+                          {
+                            text: "De que forma? ",
+                            bold: true,
+                          },
+                          parsedHealthAdditions?.storage.ventilation
+                            ?.description
+                            ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_VENTILATION(
+                                parsedHealthAdditions?.storage.ventilation
+                                  .description
+                              )
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Tem iluminação? ",
+                                style: "boldBodyTable",
+                                width: 100,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.ILLUMINATION
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.ILLUMINATION
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: [
+                          {
+                            text: "De que forma? ",
+                            bold: true,
+                          },
+                          parsedHealthAdditions?.storage.illumination
+                            ?.description
+                            ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_VENTILATION(
+                                parsedHealthAdditions?.storage.illumination
+                                  .description
+                              )
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "Possui porta com sistema de fechamento? ",
+                                style: "boldBodyTable",
+                                width: 200,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.DOOR_LOCK_SYSTEM
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage?.questions?.find(
+                                                (question) =>
+                                                  question.type ===
+                                                  DocumentHealthAdditionsQuestionType.DOOR_LOCK_SYSTEM
+                                              )?.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: [
+                          {
+                            text: "De que forma? ",
+                            bold: true,
+                          },
+                          parsedHealthAdditions?.storage.doorLockSystem
+                            ?.description
+                            ? DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_DOOR_LOCK_SYSTEM(
+                                parsedHealthAdditions?.storage.doorLockSystem
+                                  .description
+                              )
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "O abrigo é de uso compartilhado com Sala de Utilidades? ",
+                                style: "boldBodyTable",
+                                width: 250,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              document.healthAdditions?.storage
+                                                .shared
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !document.healthAdditions?.storage
+                                                .shared
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Qual é espaço destinado ao abrigo de RSS: ",
+                            bold: true,
+                          },
+                          `${
+                            document.healthAdditions?.storage.area?.toLocaleString(
+                              LOCALE
+                            ) ?? FIELD_EMPTY
+                          } m²`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        style: "bodyTable",
+                        fillColor: "#D9D9D9",
+                        colSpan: 2,
+                        ul: [
+                          "Deverá apresentar fotos panorâmicas do abrigo ou local de armazenamento dos resíduos, vistas do ambiente interno e externo. ",
+                          "O abrigo de resíduos A, B, C e E deve ser de uso exclusivo para armazenamento de RSS, sendo vetado o compartilhamento para guarda de materiais, produtos, equipamentos ou para uso com outras funções. Orientamos que o abrigo de RSS deve atender à Resolução n.º 222/2018 da ANVISA.",
+                        ],
+                      },
+                      "",
+                    ],
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        pageBreak: "before",
+        pageOrientation: "portrait",
+        stack: [
+          {
+            text: "7   TREINAMENTO E CAPACITAÇÃO NO MANEJO DE RSS",
             style: ["bold"],
           },
           {
-            text: "O PGRS deverá ser revisado a cada ano ou antecipadamente, caso ocorram alterações significativas na geração de resíduos, bem como alterações nos processos.",
+            text: "Um dos fatores mais importantes para o sucesso do Plano de Gerenciamento de Resíduos Sólidos do Serviço de Saúde - PGRSS é o treinamento contínuo, pois somente através da equipe consciente e comprometida, consegue-se atingir os objetivos pretendidos. Para tanto, os treinamentos devem abordar temas relacionados à sensibilização quanto às atitudes ambientalmente corretas, as formas de tratamento e disposição final dos resíduos e os procedimentos a serem adotados pela empresa. Todos os colaboradores devem ser envolvidos, inclusive os terceirizados, para que haja uma efetiva implementação e manutenção do PGRSS.",
+            marginTop: 20,
+          },
+          {
+            text: [
+              "Todos os colaboradores da empresa ",
+              {
+                text: document.company?.name ?? FIELD_EMPTY,
+                style: ["bold"],
+              },
+              " receberam treinamento online sobre a correta gestão dos resíduos do Serviço de Saúde, contemplando:",
+            ],
             marginTop: 15,
+          },
+          {
+            ul: [
+              "O que são resíduos sólidos;",
+              "Formas de acondicionamento dos RSS;",
+              "Coleta Seletiva;",
+              "Tratamentos e disposição final de RSS;",
+              "Educação ambiental: 3Rs e sustentabilidade;",
+              "Responsabilidade ambiental.",
+            ],
+            marginLeft: 15,
+          },
+          {
+            marginTop: 15,
+            text: "Cabe salientar que o processo de sensibilização não deve ser estático, sofrendo atualizações sempre que necessário e estabelecendo a continuidade dele, para que resultem nos efeitos pretendidos.",
+          },
+          {
+            marginTop: 15,
+            text: "Ressalta-se que o treinamento específico, quanto aos procedimentos, deve ser repassado a todos os colaboradores, inclusive aos terceirizados e prestadores de serviços, através do grupo de multiplicadores, conforme periodicidade a ser definida.",
+          },
+          {
+            marginTop: 15,
+            text: "Para a obtenção dos propósitos desejados em qualquer que seja o projeto, é imprescindível um bom plano de marketing interno, o que vem a contribuir com o processo de sensibilização e treinamento proporcionados. ",
+          },
+        ],
+      },
+      {
+        pageBreak: "before",
+        stack: [
+          {
+            text: "8 CRONOGRAMAS",
+            style: ["bold"],
+          },
+          {
+            text: "8.1 CRONOGRAMA DE TREINAMENTO",
+            style: ["bold"],
+            marginTop: 25,
             fontSize: 12,
+          },
+          {
+            text: "O programa de treinamento dos funcionários deve ser realizado no mínimo 1 vez por ano, a fim de manter os procedimentos atualizados, principalmente aos novos funcionários. ",
+            marginTop: 25,
+          },
+          {
+            text: "Conteúdo programático mínimo:",
+            marginTop: 15,
+          },
+          {
+            text: "1. Informações Básicas e Legislação Pertinente",
+            style: ["bold"],
+          },
+          {
+            separator: ["1.", ""],
+            ol: [
+              "Histórico do Programa de Gerenciamento dos Resíduos dos Serviços de Saúde (PGRSS);",
+              "Descrição das ações relativas ao manejo dos resíduos sólidos;",
+              "Características e riscos dos RSS;",
+              "RDC 222/2018 – ANVISA. – Gerenciamento interno dos RSS",
+              "Resolução CONAMA nº 358/2005. – Gerenciamento externo dos RSS.",
+            ],
+          },
+          {
+            text: "2. Classificação dos Resíduos ",
+            style: ["bold"],
+            marginTop: 15,
+          },
+          {
+            separator: ["2.", ""],
+            ol: [
+              "GRUPO A: Resíduos biológicos;",
+              "GRUPO B: Resíduos químicos;",
+              "GRUPO C: Rejeitos radioativos;",
+              "GRUPO D: Resíduos comuns; e",
+              "GRUPO E: Materiais perfurocortantes.",
+            ],
+          },
+          {
+            text: "3. Processos de descarte de resíduos ",
+            style: ["bold"],
+            marginTop: 15,
+          },
+          {
+            separator: ["3.", ""],
+            ol: [
+              "Identificação do Gerador e do Responsável Técnico;",
+              "Descrição dos Ambientes Geradores;",
+              "Identificação dos tipos de resíduos e Quantidades geradas;",
+              "Manejo;",
+              "Segregação;",
+              "Acondicionamento;",
+              "Identificação;",
+              "Transporte interno;",
+              "Armazenamento temporário;",
+              "Tratamento;",
+              "Armazenamento externo;",
+              "Coleta e transporte externo; e",
+              "Disposição final.",
+            ],
+          },
+          {
+            text: "8.2 CRONOGRAMA DE REVISÃO E ATUALIZAÇÃO DO PGRSS ",
+            style: ["bold"],
+            marginTop: 25,
+          },
+          {
+            text: "O PGRSS deverá ser revisado a cada ano ou antecipadamente, caso ocorram alterações significativas na geração de resíduos, bem como alterações nos processos.",
+            marginTop: 15,
           },
           {
             layout: {
@@ -1614,7 +3796,7 @@ export function render({
           {
             text: [
               { text: "Resíduos sólidos:", style: ["bold"] },
-              " resíduos nos estados sólidos e semissólidos, que resultam de atividades da comunidade de origem industrial, doméstica, hospitalar, comercial, agrícola, de serviços de varrição. Ficam incluídos nesta definição os lodos provenientes de sistemas de tratamento de água, aqueles gerados em equipamentos e instalações de controle de poluição, bem como determinados líquidos cujas particularidades tornem inviável seu lançamento na rede pública de esgotos ou corpos d água, ou exijam para isso soluções técnica e economicamente inviáveis, em face da melhor tecnologia disponível (NBR 10004).",
+              " resíduos nos estados sólidos e semissólidos, que resultam de atividades da comunidade de origem industrial, doméstica, hospitalar, comercial, agrícola, de serviços de varrição. Ficam incluídos nesta definição os lodos provenientes de sistemas de tratamento de água, aqueles gerados em equipamentos e instalações de controle de poluição, bem como determinados líquidos cujas particularidades tornem inviável seu lançamento na rede pública de esgotos ou corpos d’água, ou exijam para isso soluções técnica e economicamente inviáveis, em face da melhor tecnologia disponível (NBR 10004).",
             ],
             marginTop: 25,
           },
@@ -1761,6 +3943,12 @@ export function render({
       },
       "text-justify": {
         alignment: "justify",
+      },
+      headerTable: {
+        fontSize: 10,
+        fillColor: "#D9D9D9",
+        bold: true,
+        font: "Arial",
       },
     },
   };
