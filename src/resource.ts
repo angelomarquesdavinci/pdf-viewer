@@ -21,7 +21,7 @@ import {
   DocumentWasteWeekDays,
   IDocumentWasteContainmentAccident,
   IDocumentWasteInternalTransportation,
-} from "./types/document/interface";
+} from "./types/document/enum";
 
 export const LOCALE = "pt-BR";
 export const DRAFT_TEXT = "PGRS iniciado";
