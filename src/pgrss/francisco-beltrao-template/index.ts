@@ -948,7 +948,7 @@ export function render({ classifications, cnaes, document }: IRenderReq) {
               // },
               {
                 text: `(${
-                  groupA.classificationIds?.includes("18 04 01") ? "X" : " "
+                  groupE?.classificationIds?.includes("18 04 01") ? "X" : " "
                 }) Materiais perfurocortantes ou escarificantes, tais como: lâminas de barbear, agulhas, escalpes, ampolas de vidro, brocas, limas endodônticas, pontas diamantadas, lâminas de bisturi, lancetas; tubos capilares; micropipetas; lâminas e lamínulas; espátulas; e todos os utensílios de vidro quebrados no laboratório (pipetas, tubos de coleta sanguínea e placas de Petri) e outros similares\n`,
               },
               {
