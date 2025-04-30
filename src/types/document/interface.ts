@@ -1,9 +1,30 @@
 import { IUserCrudModel } from "../crud/user/interface";
-import { DataStatus, IDataQueryReq } from "../data/interface";
+import {
+  DataStatus,
+  IDataQueryReq,
+  IQueryByFiltersParams,
+} from "../data/interface";
+import { DocumentTemplateType } from "../documentTemplate/interface";
+import { ILocation } from "../location/interface";
 import {
   DocumentApprovedPreventionActions,
   DocumentCompanyPeoplesInvolved,
+  DocumentCompanyServiceMode,
   DocumentFrequency,
+  DocumentHealthAdditionsSanitizationDoorLockSystem,
+  DocumentHealthAdditionsSanitizationMaterialsUsed,
+  DocumentHealthAdditionsSanitizationProcedure,
+  DocumentHealthAdditionsSanitizationProducts,
+  DocumentHealthAdditionsSanitizationProtectionGear,
+  DocumentHealthAdditionsSanitizationVentilation,
+  DocumentHealthAdditionsSecurityVaccines,
+  DocumentHealthInternalCollectionTransport,
+  DocumentHealthWasteClass,
+  DocumentHealthWasteIdentification,
+  DocumentHealthWasteOriginPoint,
+  DocumentHealthWastePacking,
+  DocumentHealthWastePutrescibleCoolingSystem,
+  DocumentHealthWastePutrescibleDescription,
   DocumentHistoryType,
   DocumentRefectoryPrepare,
   DocumentStatus,
@@ -22,26 +43,10 @@ import {
   DocumentWasteTreatmentSystems,
   DocumentWasteUnit,
   DocumentWasteUsedHardwares,
-  DocumentHealthWasteClass,
   DocumentWasteWeekDays,
   IDocumentContainmentMeasures,
   IDocumentWasteContainmentAccident,
   IDocumentWasteInternalTransportation,
-  DocumentHealthSanitizationType,
-  DocumentHealthAdditionsQuestionType,
-  DocumentHealthAdditionsSanitizationProducts,
-  DocumentHealthAdditionsSanitizationProtectionGear,
-  DocumentHealthAdditionsSanitizationProcedure,
-  DocumentHealthAdditionsSanitizationMaterialsUsed,
-  DocumentHealthAdditionsSanitizationVentilation,
-  DocumentHealthAdditionsSanitizationDoorLockSystem,
-  DocumentHealthWasteOriginPoint,
-  DocumentHealthWastePutrescibleCoolingSystem,
-  DocumentHealthWastePutrescibleDescription,
-  DocumentCompanyServiceMode,
-  DocumentHealthWastePacking,
-  DocumentHealthInternalCollectionTransport,
-  DocumentHealthAdditionsSecurityVaccines,
 } from "./enum";
 
 export interface IDocument extends IUserCrudModel {
@@ -61,6 +66,9 @@ export interface IDocument extends IUserCrudModel {
   healthAdditions?: IDocumentHealthAdditions; // Complementações saude
   healthWastes?: IDocumentHealthWaste[];
   healthWastesGroupC?: IDocumentHealthWasteGroupC;
+  holdingId?: string;
+  preset?: IDocumentPreset;
+  processingFiles?: IDocumentProcessingFiles;
 }
 
 export interface IDocumentCompany {
@@ -69,7 +77,7 @@ export interface IDocumentCompany {
   address: IAddress;
   landline: string; // tel fixo
   phone: string;
-  cnaeId: string;
+  cnaeId: string; // Atividade principal
   email: string;
 
   businessName?: string; // Nome fantasia
@@ -89,7 +97,7 @@ export interface IDocumentCompany {
   totalArea?: number; // area total
   stateRegistration?: string; // inscrição estadual
   activityDescription?: string; // CARACTERIZAÇÃO E JUSTIFICATIVA DO EMPREENDIMENTO / ATIVIDADE - DESCRICAO DAS ATIVIDADES PRESTADAS
-  cnaeIds?: string[];
+  cnaeIds?: string[]; // Atividades secundarias
   license?: string; // Licença ambiental
   licenseExpirationDate?: number; // Validade da licença
   peopleInvolved?: IDocumentCompanyPeopleInvolved; // pessoas envolvidas na geração de resíduos (POPULAÇÃO FLUTUANTE)
@@ -100,6 +108,11 @@ export interface IDocumentCompany {
   healthTotalBeds?: number; // Número de leitos total e por especialidades médicas
   healthOperationalCapability?: number; // Descrição de capacidade operacional do estabelecimento (n º de leitos/unidade ou serviço)
   serviceModes?: DocumentCompanyServiceMode[]; // Modalidades de Atendimento
+  mapUrl?: ILocation;
+  peopleInvolvedQuantity?: IDocumentCompanyPeopleInvolvedQuantity[];
+  observationHealthBeds?: number; // Número de leitos para observação
+  hospitalizationHealthBeds?: number; // Número de leitos para internação
+  outsourcedCleaningService?: boolean; // Serviço de Limpeza; Terceirizado - true, Próprio1 - false
 }
 
 export interface IAddress {
@@ -131,10 +144,10 @@ export interface IDocumentResponsible {
 }
 
 export interface IDocumentResponsibles {
-  legal?: Partial<IDocumentResponsible>; // responsavel legal
-  techinical?: Partial<IDocumentResponsible>; // responsavel técnico
-  implementation?: Partial<IDocumentResponsible>;
-  elaboration?: Partial<IDocumentResponsible>;
+  legal?: IDocumentResponsible; // responsavel legal
+  techinical?: IDocumentResponsible; // responsavel técnico
+  implementation?: IDocumentResponsible;
+  elaboration?: IDocumentResponsible;
 }
 
 export interface IDocumentProfessionalClass {
@@ -191,7 +204,7 @@ export interface IDocumentCompanyLicense {
   license: string;
   licenseExpirationDate: number;
   address?: IAddress;
-  techinical?: Partial<IDocumentResponsible>;
+  techinical?: IDocumentResponsible;
 }
 export interface IDocumentHistory {
   date: number;
@@ -227,6 +240,7 @@ export interface IDocumentQueryByTechinicalIdReq extends IDataQueryReq {
 export interface IDocumentApproved {
   artLink: string;
   artNumber?: string;
+  artExpirationDate?: number;
   timeline?: IDocumentApprovedTimeline[];
   observation?: string;
   training?: boolean;
@@ -290,6 +304,11 @@ export interface IDocumentCompanyPeopleInvolved {
   types: DocumentCompanyPeoplesInvolved[];
 }
 
+export interface IDocumentCompanyPeopleInvolvedQuantity {
+  type: DocumentCompanyPeoplesInvolved;
+  quantity: number;
+}
+
 export interface IDocumentCompanyOthersWorkSchedule {
   weekDays: DocumentWasteWeekDays[];
   hoursDayStart: string;
@@ -309,7 +328,8 @@ export interface IDocumentHealthAdditions {
 }
 
 export interface IDocumentHealthSanitization {
-  items: IDocumentHealthSanitizationItem[];
+  container: IDocumentHealthSanitizationItem; // Lixeiras, carrinhos de coleta,  containers
+  internalStorage: IDocumentHealthSanitizationItem; // Abrigo de armazenamento interno (temporário) e/ou externo de resíduos
   effluent: IDocumentHealthSanitizationEffluent; // O efluente da lavagem dos recipientes e do abrigo é direcionado para a rede coletora de esgoto?
 }
 
@@ -319,7 +339,6 @@ export interface IDocumentHealthSanitizationItem {
   otherProduct?: string; // Outro produtos utilizados
   protectionGear?: DocumentHealthAdditionsSanitizationProtectionGear; // EPIs Utilizados
   procedure?: DocumentHealthAdditionsSanitizationProcedure; // Procedimento de Limpeza
-  type: DocumentHealthSanitizationType;
 }
 
 export interface IDocumentHealthAdditionsStorage {
@@ -327,7 +346,15 @@ export interface IDocumentHealthAdditionsStorage {
   wasteClasses?: DocumentHealthWasteClass[]; // Quais tipos de resíduos são armazenados?
   wasteTypesIdentification?: boolean; // O abrigo possui identificação dos tipos de resíduos armazenados?
   wasteByType?: boolean; // O abrigo possui compartimentos específicos para cada resíduo armazenado?
-  questions?: IDocumentHealthAdditionsQuestion[];
+  protectedFloorMaterials?: IDocumentHealthAdditionsQuestion<DocumentHealthAdditionsSanitizationMaterialsUsed>; // Os pisos e paredes são revestidos de material liso, lavável e impermeável? -- Cite o material utilizado:
+  coverage?: IDocumentHealthAdditionsQuestion<DocumentHealthAdditionsSanitizationMaterialsUsed>; // Possui cobertura? -- Cite o material utilizado: {
+  ventilation?: IDocumentHealthAdditionsQuestion<DocumentHealthAdditionsSanitizationVentilation>; // Tem ventilação? -- De que forma?
+  illumination?: IDocumentHealthAdditionsQuestion<DocumentHealthAdditionsSanitizationVentilation>; // Tem iluminação? -- De que forma?
+  doorLockSystem?: IDocumentHealthAdditionsQuestion<DocumentHealthAdditionsSanitizationDoorLockSystem>; // Possui porta com sistema de fechamento? -- De que forma?
+  floorDrain?: IDocumentHealthFloorDrain; // Limpeza e Higienização
+  outlet?: boolean; // Tomada elétrica
+  waterSupply?: boolean; // Ponto de água para higienização do abrigo
+  sewageSystem?: boolean; // Rede de esgoto para coleta de águas residuárias
   shared?: boolean; // O abrigo é de uso compartilhado com Sala de Utilidades?
   area?: number; // Qual é espaço destinado ao abrigo de RSS? (m2)
   wasteGroups?: IDocumentHealthStorageWasteGroups[]; // CARACTERÍSTICAS DO ABRIGO EXTERNO (ORGANIZADOS POR GRUPO) [Abrigo]
@@ -339,11 +366,11 @@ export type IDocumentHealthAdditionsQuestionDescription =
   | DocumentHealthAdditionsSanitizationVentilation
   | DocumentHealthAdditionsSanitizationDoorLockSystem;
 
-export interface IDocumentHealthAdditionsQuestion {
-  type: DocumentHealthAdditionsQuestionType;
-  exists: boolean; // Possui **?
-  description?: IDocumentHealthAdditionsQuestionDescription; // De que forma?
-  public?: boolean; // O ralo é direcionado para a rede de esgoto?
+export interface IDocumentHealthAdditionsQuestion<
+  T extends IDocumentHealthAdditionsQuestionDescription
+> {
+  exists: boolean;
+  description?: T; // De que forma?
 }
 
 export type IDocumentHealthWaste =
@@ -369,6 +396,10 @@ export interface IDocumentHealthWasteBase {
   companiesTransport?: IDocumentCompanyLicense[];
   previousTreatment?: DocumentWasteTreatment; // Tratamento Prévio - Opções (AUTOCLAVE, MICROWAVE) *APENAS EM GRUPO A*
   trashCans?: IDocumentWasteTrashCan[]; // Número de Recipientes
+  externalPackaging?: DocumentWasteExternalPackaging; // Acondicionamento externo
+  containmentAccidents?: IDocumentWasteContainmentAccident[]; // Medidas de contenção em caso de acidente
+  storage?: DocumentWasteStorage; // Armazenamento
+  identifications?: DocumentHealthWasteIdentification[]; // IDENTIFICAÇÃO DOS RESÍDUOS GERADOS
 }
 
 export interface IDocumentHealthWasteClassA
@@ -419,50 +450,6 @@ export interface IDocumentHealthFloorDrain {
   public: boolean; // O ralo é direcionado para a rede de esgoto?
 }
 
-export interface IDocumentHealthAdditionsParsed {
-  sanitization: IDocumentHealthSanitizationParsed; // Limpeza e Higienização
-  storage: IDocumentHealthAdditionsStorageParsed; // CARACTERÍSTICAS DO ABRIGO EXTERNO / LOCAL DE ARMAZENAMENTO
-  homeCare: string; // Descrição dos procedimentos adotados nas etapas de acondicionamento, coleta e transporte de resíduos gerados na casa dos pacientes.
-}
-
-export interface IDocumentHealthSanitizationParsed {
-  container: IDocumentHealthSanitizationItem;
-  internalStorage: IDocumentHealthSanitizationItem;
-  effluent: IDocumentHealthSanitizationEffluent; // O efluente da lavagem dos recipientes e do abrigo é direcionado para a rede coletora de esgoto?
-}
-
-export interface IDocumentHealthAdditionsStorageParsed {
-  exists?: boolean; // Existe abrigo para armazenamento dos resíduos?
-  wasteClasses?: DocumentHealthWasteClass[];
-  wasteTypesIdentification?: boolean; // O abrigo possui identificação dos tipos de resíduos armazenados?
-  wasteByType?: boolean; // O abrigo possui compartimentos específicos para cada resíduo armazenado?
-  protectedFloorMaterials?: IDocumentHealthAdditionsQuestionBaseParsed &
-    IDocumentHealthAdditionsQuestionDescriptionParsed<DocumentHealthAdditionsSanitizationMaterialsUsed>; // Os pisos e paredes são revestidos de material liso, lavável e impermeável? -- Cite o material utilizado:
-  coverage?: IDocumentHealthAdditionsQuestionBaseParsed &
-    IDocumentHealthAdditionsQuestionDescriptionParsed<DocumentHealthAdditionsSanitizationMaterialsUsed>; // Possui cobertura? -- Cite o material utilizado: {
-  ventilation?: IDocumentHealthAdditionsQuestionBaseParsed &
-    IDocumentHealthAdditionsQuestionDescriptionParsed<DocumentHealthAdditionsSanitizationVentilation>; // Tem ventilação? -- De que forma?
-  illumination?: IDocumentHealthAdditionsQuestionBaseParsed &
-    IDocumentHealthAdditionsQuestionDescriptionParsed<DocumentHealthAdditionsSanitizationVentilation>; // Tem iluminação? -- De que forma?
-  doorLockSystem?: IDocumentHealthAdditionsQuestionBaseParsed &
-    IDocumentHealthAdditionsQuestionDescriptionParsed<DocumentHealthAdditionsSanitizationDoorLockSystem>; // Possui porta com sistema de fechamento? -- De que forma?
-  floorDrain?: IDocumentHealthAdditionsQuestionBaseParsed; // Limpeza e Higienização
-  shared?: boolean; // O abrigo é de uso compartilhado com Sala de Utilidades?
-  area?: number; // Qual é espaço destinado ao abrigo de RSS? (m2)
-}
-
-export interface IDocumentHealthAdditionsQuestionBaseParsed {
-  type: DocumentHealthAdditionsQuestionType;
-  exists: boolean; // Possui **?
-  public?: boolean; // O ralo é direcionado para a rede de esgoto?
-}
-
-export interface IDocumentHealthAdditionsQuestionDescriptionParsed<
-  T extends IDocumentHealthAdditionsQuestion["description"]
-> {
-  description?: T; // De que forma?
-}
-
 export interface IDocumentWasteTrashCan {
   originPoint: DocumentHealthWasteOriginPoint;
   quantity: number;
@@ -473,7 +460,8 @@ export interface IDocumentHealthStorageWasteGroups {
   area?: number; // Qual é espaço destinado ao abrigo de RSS? (m2)
   drainageDuct?: boolean; // Canaletas para escoamento
   shelves?: number; // Número de prateleiras
-  questions?: IDocumentHealthAdditionsQuestion[];
+  protectedFloorMaterials?: DocumentHealthAdditionsSanitizationMaterialsUsed; // Os pisos e paredes são revestidos de material liso, lavável e impermeável? -- Cite o material utilizado:
+  coverage?: boolean; // Possui cobertura? -- Cite o material utilizado: {
 }
 
 export interface IDocumentHealthAdditionsSecurity {
@@ -487,4 +475,92 @@ export interface IDocumentHealthAdditionsSecurity {
 
 export interface IDocumentHealthAdditionsInternalCollection {
   transport?: DocumentHealthInternalCollectionTransport; // Equipamento utilizado para coleta interna / Os resíduos serão assim transportados até o Abrigo:
+}
+
+export interface IDocumentFilterQueries
+  extends IQueryByFiltersParams<IDocument> {
+  documentStatus?: DocumentStatus;
+  city?: string;
+  state?: string;
+  holdingId?: string;
+  type?: DocumentTemplateType;
+  franchiseHoldingId?: string; // id of the authenticated holding
+}
+
+export type IDocumentFilterQueriesIndexes =
+  | "techinicalId-documentStatus-index"
+  | "status-documentStatus-index";
+
+export interface ICheckPermissionsParams {
+  document?: Partial<IDocument>;
+  user: {
+    id: string;
+    franchiseId?: string;
+  };
+}
+
+export interface IDocumentDeleteByIdReq {
+  id: string;
+  userId: string;
+}
+
+export interface IDocumentGetVersionChangesReq {
+  id: string;
+  userId: string;
+  franchiseId?: string;
+}
+
+export interface IDocumentCompareToPreviousVersionReq {
+  document: Partial<IDocument>;
+}
+
+export interface IDocumentSentByIdReq {
+  userId: string;
+  franchiseId?: string;
+  origin: string;
+}
+
+export interface IDocumentSentRes {
+  documentStatus: DocumentStatus;
+}
+
+export interface IDocumentPreset {
+  company?: Partial<IDocumentCompany>;
+  healthWastes?: Partial<IDocumentHealthWaste>[];
+  companyLicenses?: Partial<IDocumentCompanyLicense>[];
+}
+
+export interface IDocumentProcessingFiles {
+  cnpjCard?: string;
+}
+
+export interface IDocumentCreateCompanyByIdReq {
+  id: string;
+  company: IDocumentCompany;
+  templateRef: string;
+  userId: string;
+  franchiseId?: string;
+}
+
+export interface IDocumentHealthWasteAssistant {
+  group: DocumentHealthWasteClass;
+  unit: DocumentWasteUnit;
+  quantity: number;
+  period: string;
+  treatment: DocumentWasteTreatment;
+}
+
+export interface IDocumentCompanyLicenseAssistant {
+  name: string;
+  identifier: string;
+  license: string;
+  licenseExpirationDate: string;
+}
+
+export interface IDocumentSetProcessingFileByIdReq {
+  key: string;
+  id: string;
+  type: keyof IDocumentProcessingFiles;
+  userId: string;
+  franchiseId?: string;
 }

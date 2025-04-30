@@ -97,6 +97,14 @@ export interface IDataUpdItemDataById<T extends IDataModel> {
   listName: string;
 }
 
+export interface IDataUpdNestedItemDataById {
+  id: string;
+  data: any[];
+  condition?: string;
+  index: number;
+  listPath: string;
+}
+
 export interface IDataRemoveItemDataById {
   id: string;
   condition?: string;
@@ -109,10 +117,9 @@ export interface IDataListByIdsReq {
   fields?: string[];
 }
 
-// eslint-disable-next-line
 export interface IDataAddNestedItemDataById<T extends IDataModel> {
   id: string;
-  data: string[];
+  data: any[];
   listPath: string;
 }
 
@@ -161,4 +168,24 @@ export interface IPagingRes<T extends IDataModel> {
 export interface IListAllReq {
   index?: string;
   fields?: string[];
+}
+
+export interface IQueryByFiltersParams<T extends IDataModel> {
+  pagination?: IQueriesPagination;
+  search?: string;
+  status: number;
+  dateRange?: {
+    start?: number;
+    end?: number;
+  };
+  fields?: (keyof T)[];
+  pk: string | number;
+  index: string;
+  skFrom?: number;
+  skTo?: number;
+}
+
+export interface IQueriesPagination {
+  limit?: number;
+  offset?: string;
 }

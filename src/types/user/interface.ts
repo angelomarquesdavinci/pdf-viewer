@@ -13,9 +13,12 @@ export interface IUser extends ICrudModel {
   certificate?: ISignatureCertificate;
   phone?: string;
   position?: string;
-  class?: string;
   company?: IUserCompany;
   rubric?: string;
+  professionalClass?: IUserProfessionalClass;
+  identityNumber?: string; // RG
+  taxpayerNumber?: string; // CPF
+  profession?: string; // profissão
 }
 
 export interface IUserGetByUsernameReq {
@@ -84,4 +87,10 @@ export interface IUserCompany {
 export interface IUserSetRubricByIdReq {
   id: string;
   rubric: string;
+}
+
+export interface IUserProfessionalClass {
+  identity: string; // N.° de registro no órgão de classe profissional
+  institution: string; // Órgão de Registro de Classe Profissional
+  state?: string; // UF do órgão de classe profissional
 }

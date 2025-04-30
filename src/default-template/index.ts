@@ -17,13 +17,14 @@ import {
 import {
   DocumentWasteClass,
   DocumentWasteCompanyLicense,
+} from "../types/document/enum";
+import {
   IDocumentCompanyLicense,
   IDocumentWaste,
-  IRenderReq,
 } from "../types/document/interface";
+import { IRenderReq } from "../types/template/interface";
 import {
   cnpjMask,
-  cpfMask,
   dateFormat,
   getClassificationId,
   getCnaeId,
@@ -984,592 +985,592 @@ export function render({
           },
         ],
       },
-      {
-        pageBreak: "before",
-        pageOrientation: "landscape",
-        stack: [
-          {
-            text: "4    FASE I – DIAGNÓSTICO DA SITUAÇÃO ATUAL",
-            style: ["bold"],
-          },
-          {
-            text: "4.1 LEVANTAMENTO QUALI E QUANTITATIVO DOS RESÍDUOS GERADOS",
-            style: ["bold"],
-          },
-          {
-            lineHeight: 1.2,
-            marginTop: 15,
-            fontSize: 10,
-            stack: [
-              {
-                table: {
-                  widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
-                  headerRows: 3,
-                  dontBreakRows: true,
-                  body: [
-                    [
-                      {
-                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
-                        colSpan: 9,
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        text: "A) RESÍDUOS PERIGOSOS (CLASSE I)",
-                        colSpan: 5,
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      {
-                        stack: [
-                          {
-                            columns: [
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -4,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "SIM",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              !wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -2,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "NÃO",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
-                                style: "tableBody",
-                                width: "*",
-                              },
-                            ],
-                          },
-                        ],
-                        colSpan: 4,
-                      },
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        stack: [
-                          { text: "Ponto de geração: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Resíduos Gerados: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Quantificação: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de acondicionamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de armazenamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Tratamento/Destinação: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Coleta interna: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pelo transporte:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pela disposição final:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                    ],
-                    ...wastesClassI,
-                  ],
-                },
-              },
-            ],
-          },
-          {
-            lineHeight: 1.2,
-            marginTop: 15,
-            fontSize: 10,
-            stack: [
-              {
-                pageBreak: "before",
-                table: {
-                  widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
-                  headerRows: 3,
-                  dontBreakRows: true,
-                  body: [
-                    [
-                      {
-                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
-                        colSpan: 9,
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        text: "A) RESÍDUOS NÃO RECICLÁVEIS (CLASSE IIA)",
-                        colSpan: 5,
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      {
-                        stack: [
-                          {
-                            columns: [
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -4,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "SIM",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              !wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -2,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "NÃO",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
-                                style: "tableBody",
-                                width: "*",
-                              },
-                            ],
-                          },
-                        ],
-                        colSpan: 4,
-                      },
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        stack: [
-                          { text: "Ponto de geração: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Resíduos Gerados: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Quantificação: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de acondicionamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de armazenamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Tratamento/Destinação: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Coleta interna: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pelo transporte:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pela disposição final:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                    ],
-                    ...wastesClassIIa,
-                  ],
-                },
-              },
-            ],
-          },
-          {
-            lineHeight: 1.2,
-            marginTop: 15,
-            fontSize: 10,
-            stack: [
-              {
-                pageBreak: "before",
-                table: {
-                  widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
-                  headerRows: 3,
-                  dontBreakRows: true,
-                  body: [
-                    [
-                      {
-                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
-                        colSpan: 9,
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        text: "A) RESÍDUOS RECICLÁVEIS (CLASSE IIB)",
-                        colSpan: 5,
-                      },
-                      "",
-                      "",
-                      "",
-                      "",
-                      {
-                        stack: [
-                          {
-                            columns: [
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -4,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "SIM",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                columns: [
-                                  {
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              !wastesClassI.length ? "X" : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2,
-                                              y: -2,
-                                            },
-                                            fontSize: 12,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "NÃO",
-                                    style: "tableBody",
-                                  },
-                                ],
-                                width: 40,
-                              },
-                              {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
-                                style: "tableBody",
-                                width: "*",
-                              },
-                            ],
-                          },
-                        ],
-                        colSpan: 4,
-                      },
-                      "",
-                      "",
-                      "",
-                    ],
-                    [
-                      {
-                        stack: [
-                          { text: "Ponto de geração: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Resíduos Gerados: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Quantificação: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de acondicionamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Forma de armazenamento: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Tratamento/Destinação: ",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          { text: "Coleta interna: ", style: "tableHeader" },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pelo transporte:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                      {
-                        stack: [
-                          {
-                            text: "Empresa responsável pela disposição final:",
-                            style: "tableHeader",
-                          },
-                        ],
-                        style: ["bold", "bg-gray-dark"],
-                      },
-                    ],
-                    ...wastesClassIIb,
-                  ],
-                },
-              },
-            ],
-          },
-        ],
-      },
+      // {
+      //   pageBreak: "before",
+      //   pageOrientation: "landscape",
+      //   stack: [
+      //     {
+      //       text: "4    FASE I – DIAGNÓSTICO DA SITUAÇÃO ATUAL",
+      //       style: ["bold"],
+      //     },
+      //     {
+      //       text: "4.1 LEVANTAMENTO QUALI E QUANTITATIVO DOS RESÍDUOS GERADOS",
+      //       style: ["bold"],
+      //     },
+      //     {
+      //       lineHeight: 1.2,
+      //       marginTop: 15,
+      //       fontSize: 10,
+      //       stack: [
+      //         {
+      //           table: {
+      //             widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
+      //             headerRows: 3,
+      //             dontBreakRows: true,
+      //             body: [
+      //               [
+      //                 {
+      //                   text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
+      //                   colSpan: 9,
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 "",
+      //                 "",
+      //                 "",
+      //                 "",
+      //                 "",
+      //                 "",
+      //                 "",
+      //                 "",
+      //               ],
+      //               [
+      //                 {
+      //                   text: "A) RESÍDUOS PERIGOSOS (CLASSE I)",
+      //                   colSpan: 5,
+      //                 },
+      //                 "",
+      //                 "",
+      //                 "",
+      //                 "",
+      //                 {
+      //                   stack: [
+      //                     {
+      //                       columns: [
+      //                         {
+      //                           columns: [
+      //                             {
+      //                               table: {
+      //                                 heights: [5],
+      //                                 widths: [2.5],
+      //                                 body: [
+      //                                   [
+      //                                     {
+      //                                       text: `${
+      //                                         wastesClassI.length ? "X" : ""
+      //                                       }`,
+      //                                       relativePosition: {
+      //                                         x: -2,
+      //                                         y: -4,
+      //                                       },
+      //                                       fontSize: 12,
+      //                                     },
+      //                                   ],
+      //                                 ],
+      //                               },
+      //                               width: 15,
+      //                             },
+      //                             {
+      //                               text: "SIM",
+      //                               style: "tableBody",
+      //                             },
+      //                           ],
+      //                           width: 40,
+      //                         },
+      //                         {
+      //                           columns: [
+      //                             {
+      //                               table: {
+      //                                 heights: [5],
+      //                                 widths: [2.5],
+      //                                 body: [
+      //                                   [
+      //                                     {
+      //                                       text: `${
+      //                                         !wastesClassI.length ? "X" : ""
+      //                                       }`,
+      //                                       relativePosition: {
+      //                                         x: -2,
+      //                                         y: -2,
+      //                                       },
+      //                                       fontSize: 12,
+      //                                     },
+      //                                   ],
+      //                                 ],
+      //                               },
+      //                               width: 15,
+      //                             },
+      //                             {
+      //                               text: "NÃO",
+      //                               style: "tableBody",
+      //                             },
+      //                           ],
+      //                           width: 40,
+      //                         },
+      //                         {
+      //                           text: "Se assinalar sim, complete o quadro abaixo:",
+      //                           style: "tableBody",
+      //                           width: "*",
+      //                         },
+      //                       ],
+      //                     },
+      //                   ],
+      //                   colSpan: 4,
+      //                 },
+      //                 "",
+      //                 "",
+      //                 "",
+      //               ],
+      //               [
+      //                 {
+      //                   stack: [
+      //                     { text: "Ponto de geração: ", style: "tableHeader" },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     { text: "Resíduos Gerados: ", style: "tableHeader" },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     { text: "Quantificação: ", style: "tableHeader" },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     {
+      //                       text: "Forma de acondicionamento: ",
+      //                       style: "tableHeader",
+      //                     },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     {
+      //                       text: "Forma de armazenamento: ",
+      //                       style: "tableHeader",
+      //                     },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     {
+      //                       text: "Tratamento/Destinação: ",
+      //                       style: "tableHeader",
+      //                     },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     { text: "Coleta interna: ", style: "tableHeader" },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     {
+      //                       text: "Empresa responsável pelo transporte:",
+      //                       style: "tableHeader",
+      //                     },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //                 {
+      //                   stack: [
+      //                     {
+      //                       text: "Empresa responsável pela disposição final:",
+      //                       style: "tableHeader",
+      //                     },
+      //                   ],
+      //                   style: ["bold", "bg-gray-dark"],
+      //                 },
+      //               ],
+      //               ...wastesClassI,
+      //             ],
+      //           },
+      //         },
+      //       ],
+      //     },
+      //     // {
+      //     //   lineHeight: 1.2,
+      //     //   marginTop: 15,
+      //     //   fontSize: 10,
+      //     //   stack: [
+      //     //     {
+      //     //       pageBreak: "before",
+      //     //       table: {
+      //     //         widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
+      //     //         headerRows: 3,
+      //     //         dontBreakRows: true,
+      //     //         body: [
+      //     //           [
+      //     //             {
+      //     //               text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
+      //     //               colSpan: 9,
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //           ],
+      //     //           [
+      //     //             {
+      //     //               text: "A) RESÍDUOS NÃO RECICLÁVEIS (CLASSE IIA)",
+      //     //               colSpan: 5,
+      //     //             },
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   columns: [
+      //     //                     {
+      //     //                       columns: [
+      //     //                         {
+      //     //                           table: {
+      //     //                             heights: [5],
+      //     //                             widths: [2.5],
+      //     //                             body: [
+      //     //                               [
+      //     //                                 {
+      //     //                                   text: `${
+      //     //                                     wastesClassI.length ? "X" : ""
+      //     //                                   }`,
+      //     //                                   relativePosition: {
+      //     //                                     x: -2,
+      //     //                                     y: -4,
+      //     //                                   },
+      //     //                                   fontSize: 12,
+      //     //                                 },
+      //     //                               ],
+      //     //                             ],
+      //     //                           },
+      //     //                           width: 15,
+      //     //                         },
+      //     //                         {
+      //     //                           text: "SIM",
+      //     //                           style: "tableBody",
+      //     //                         },
+      //     //                       ],
+      //     //                       width: 40,
+      //     //                     },
+      //     //                     {
+      //     //                       columns: [
+      //     //                         {
+      //     //                           table: {
+      //     //                             heights: [5],
+      //     //                             widths: [2.5],
+      //     //                             body: [
+      //     //                               [
+      //     //                                 {
+      //     //                                   text: `${
+      //     //                                     !wastesClassI.length ? "X" : ""
+      //     //                                   }`,
+      //     //                                   relativePosition: {
+      //     //                                     x: -2,
+      //     //                                     y: -2,
+      //     //                                   },
+      //     //                                   fontSize: 12,
+      //     //                                 },
+      //     //                               ],
+      //     //                             ],
+      //     //                           },
+      //     //                           width: 15,
+      //     //                         },
+      //     //                         {
+      //     //                           text: "NÃO",
+      //     //                           style: "tableBody",
+      //     //                         },
+      //     //                       ],
+      //     //                       width: 40,
+      //     //                     },
+      //     //                     {
+      //     //                       text: "Se assinalar sim, complete o quadro abaixo:",
+      //     //                       style: "tableBody",
+      //     //                       width: "*",
+      //     //                     },
+      //     //                   ],
+      //     //                 },
+      //     //               ],
+      //     //               colSpan: 4,
+      //     //             },
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //           ],
+      //     //           [
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Ponto de geração: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Resíduos Gerados: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Quantificação: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Forma de acondicionamento: ",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Forma de armazenamento: ",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Tratamento/Destinação: ",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Coleta interna: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Empresa responsável pelo transporte:",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Empresa responsável pela disposição final:",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //           ],
+      //     //           ...wastesClassIIa,
+      //     //         ],
+      //     //       },
+      //     //     },
+      //     //   ],
+      //     // },
+      //     // {
+      //     //   lineHeight: 1.2,
+      //     //   marginTop: 15,
+      //     //   fontSize: 10,
+      //     //   stack: [
+      //     //     {
+      //     //       pageBreak: "before",
+      //     //       table: {
+      //     //         widths: [80, 70, 70, 90, 77, "*", 55, 70, 70],
+      //     //         headerRows: 3,
+      //     //         dontBreakRows: true,
+      //     //         body: [
+      //     //           [
+      //     //             {
+      //     //               text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO EMPREENDIMENTO \n\n",
+      //     //               colSpan: 9,
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //           ],
+      //     //           [
+      //     //             {
+      //     //               text: "A) RESÍDUOS RECICLÁVEIS (CLASSE IIB)",
+      //     //               colSpan: 5,
+      //     //             },
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   columns: [
+      //     //                     {
+      //     //                       columns: [
+      //     //                         {
+      //     //                           table: {
+      //     //                             heights: [5],
+      //     //                             widths: [2.5],
+      //     //                             body: [
+      //     //                               [
+      //     //                                 {
+      //     //                                   text: `${
+      //     //                                     wastesClassI.length ? "X" : ""
+      //     //                                   }`,
+      //     //                                   relativePosition: {
+      //     //                                     x: -2,
+      //     //                                     y: -4,
+      //     //                                   },
+      //     //                                   fontSize: 12,
+      //     //                                 },
+      //     //                               ],
+      //     //                             ],
+      //     //                           },
+      //     //                           width: 15,
+      //     //                         },
+      //     //                         {
+      //     //                           text: "SIM",
+      //     //                           style: "tableBody",
+      //     //                         },
+      //     //                       ],
+      //     //                       width: 40,
+      //     //                     },
+      //     //                     {
+      //     //                       columns: [
+      //     //                         {
+      //     //                           table: {
+      //     //                             heights: [5],
+      //     //                             widths: [2.5],
+      //     //                             body: [
+      //     //                               [
+      //     //                                 {
+      //     //                                   text: `${
+      //     //                                     !wastesClassI.length ? "X" : ""
+      //     //                                   }`,
+      //     //                                   relativePosition: {
+      //     //                                     x: -2,
+      //     //                                     y: -2,
+      //     //                                   },
+      //     //                                   fontSize: 12,
+      //     //                                 },
+      //     //                               ],
+      //     //                             ],
+      //     //                           },
+      //     //                           width: 15,
+      //     //                         },
+      //     //                         {
+      //     //                           text: "NÃO",
+      //     //                           style: "tableBody",
+      //     //                         },
+      //     //                       ],
+      //     //                       width: 40,
+      //     //                     },
+      //     //                     {
+      //     //                       text: "Se assinalar sim, complete o quadro abaixo:",
+      //     //                       style: "tableBody",
+      //     //                       width: "*",
+      //     //                     },
+      //     //                   ],
+      //     //                 },
+      //     //               ],
+      //     //               colSpan: 4,
+      //     //             },
+      //     //             "",
+      //     //             "",
+      //     //             "",
+      //     //           ],
+      //     //           [
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Ponto de geração: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Resíduos Gerados: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Quantificação: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Forma de acondicionamento: ",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Forma de armazenamento: ",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Tratamento/Destinação: ",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 { text: "Coleta interna: ", style: "tableHeader" },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Empresa responsável pelo transporte:",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //             {
+      //     //               stack: [
+      //     //                 {
+      //     //                   text: "Empresa responsável pela disposição final:",
+      //     //                   style: "tableHeader",
+      //     //                 },
+      //     //               ],
+      //     //               style: ["bold", "bg-gray-dark"],
+      //     //             },
+      //     //           ],
+      //     //           ...wastesClassIIb,
+      //     //         ],
+      //     //       },
+      //     //     },
+      //     //   ],
+      //     // },
+      //   ],
+      // },
       {
         pageBreak: "before",
         pageOrientation: "portrait",
@@ -2074,31 +2075,31 @@ export function render({
               ],
             },
           },
-          {
-            margin: [20, 0],
-            layout: {
-              fillColor: function (rowIndex) {
-                return rowIndex % 2 === 0 ? "#EAF1DD" : null;
-              },
-              hLineColor: function () {
-                return "#C2D69B";
-              },
-              vLineColor: function () {
-                return "#C2D69B";
-              },
-              hLineWidth: function () {
-                return 0.1;
-              },
-              vLineWidth: function () {
-                return 0.1;
-              },
-            },
-            style: ["center"],
-            table: {
-              widths: ["*", "*"],
-              body: [...timeline],
-            },
-          },
+          // {
+          //   margin: [20, 0],
+          //   layout: {
+          //     fillColor: function (rowIndex) {
+          //       return rowIndex % 2 === 0 ? "#EAF1DD" : null;
+          //     },
+          //     hLineColor: function () {
+          //       return "#C2D69B";
+          //     },
+          //     vLineColor: function () {
+          //       return "#C2D69B";
+          //     },
+          //     hLineWidth: function () {
+          //       return 0.1;
+          //     },
+          //     vLineWidth: function () {
+          //       return 0.1;
+          //     },
+          //   },
+          //   style: ["center"],
+          //   table: {
+          //     widths: ["*", "*"],
+          //     body: [...timeline],
+          //   },
+          // },
         ],
       },
       {

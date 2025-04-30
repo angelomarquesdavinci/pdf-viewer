@@ -17,5 +17,7 @@ module.exports = {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-unused-vars": "off",
     "no-prototype-builtins": "off",
+    "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
+    "no-case-declarations": "off",
   },
 };

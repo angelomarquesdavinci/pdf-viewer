@@ -1,53 +1,29 @@
-import {
-  TDocumentDefinitions,
-  TableCell,
-  TableLayout,
-} from "pdfmake/interfaces";
+import { TDocumentDefinitions, TableCell } from "pdfmake/interfaces";
 import {
   DOCUMENT_FREQUENCY,
   DOCUMENT_WASTE_COMPANY_LICENSE,
   DOCUMENT_WASTE_FREQUENCY,
-  DOCUMENT_WASTE_ORIGIN_POINT,
-  DOCUMENT_WASTE_PACKING,
-  DOCUMENT_WASTE_STORAGE,
   DOCUMENT_WASTE_TREATMENT,
   DOCUMENT_WASTE_UNIT,
   DOCUMENT_WASTE_WEEKDAYS,
   LOCALE,
 } from "../../resource";
 import {
-  cnpjMask,
-  cpfMask,
-  dateFormat,
-  getClassificationId,
-  getCnaeId,
-  getCnaeIdList,
-  getDateSec,
-  phoneMask,
-  setUpAddress,
-} from "../../utils";
-import {
-  IHealthWasteClassLabel,
-  IRenderReq,
-} from "../../types/template/interface";
+  DocumentHealthAdditionsQuestionType,
+  DocumentHealthAdditionsSanitizationProducts,
+  DocumentHealthSanitizationType,
+  DocumentHealthWasteClass,
+  DocumentWasteCompanyLicense,
+} from "../../types/document/enum";
 import {
   IDocumentCompanyLicense,
   IDocumentHealthAdditions,
   IDocumentHealthAdditionsParsed,
   IDocumentHealthAdditionsStorageParsed,
+  IDocumentHealthWaste,
   IDocumentHealthWasteClassA,
   IDocumentHealthWasteClassE,
-  IDocumentWaste,
 } from "../../types/document/interface";
-import {
-  DocumentHealthAdditionsQuestionType,
-  DocumentHealthAdditionsSanitizationProducts,
-  DocumentHealthSanitizationType,
-  DocumentHealthWasteClass,
-  DocumentWasteClass,
-  DocumentWasteCompanyLicense,
-} from "../../types/document/enum";
-import { groupKeyMap } from "../../types/template/utils";
 import {
   DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_DOOR_LOCK_SYSTEM,
   DOCUMENT_HEALTH_ADDITIONS_SANITIZATION_MATERIALS_USED,
@@ -60,6 +36,21 @@ import {
   DOCUMENT_HEALTH_WASTE_PUTRESCIBLE_COOLING_SYSTEM,
   DOCUMENT_HEALTH_WASTE_PUTRESCIBLE_DESCRIPTION,
 } from "../../types/document/resource";
+import {
+  IHealthWasteClassLabel,
+  IRenderReq,
+} from "../../types/template/interface";
+import { groupKeyMap } from "../../types/template/utils";
+import {
+  cnpjMask,
+  cpfMask,
+  dateFormat,
+  getCnaeId,
+  getCnaeIdList,
+  getDateSec,
+  phoneMask,
+  setUpAddress,
+} from "../../utils";
 
 export const FIELD_EMPTY = "- ";
 
@@ -77,15 +68,6 @@ const borderOptions = {
   noRight: [true, true, false, true],
   noLeft: [false, true, true, true],
   bottomOnly: [false, false, false, true],
-};
-
-const thinBorderLayout: TableLayout = {
-  hLineWidth: function () {
-    return 0.1;
-  },
-  vLineWidth: function () {
-    return 0.1;
-  },
 };
 
 function parseHealthAdditions(
@@ -160,10 +142,7 @@ export function render({
   techinical,
   cnaes,
 }: IRenderReq) {
-  const wastesClassI: TableCell[][] = [];
-  const wastesClassIIa: TableCell[][] = [];
-  const wastesClassIIb: TableCell[][] = [];
-  const companys: TableCell[][] = [];
+  const companies: TableCell[][] = [];
   const timeline: TableCell[][] = [];
 
   const groups: IHealthWasteClassLabel = {};
@@ -241,7 +220,7 @@ export function render({
       : FIELD_EMPTY;
 
   function getCompanyWastes(
-    wastes: IDocumentWaste[]
+    wastes: IDocumentHealthWaste[]
   ): IDocumentCompanyLicense[] {
     const companys: IDocumentCompanyLicense[] = [];
 
@@ -270,115 +249,17 @@ export function render({
     return companys;
   }
 
-  getCompanyWastes(document.wastes ?? []).forEach((company) => {
+  getCompanyWastes(document.healthWastes ?? []).forEach((company) => {
     const row: TableCell[] = [
       `${company.name} / ${cnpjMask(company.identifier)}`,
       `${company.license} - ${dateFormat(company.licenseExpirationDate)}`,
     ];
 
-    companys.push(row);
+    companies.push(row);
   });
 
-  function getCompaniesTransport(waste: IDocumentWaste): string {
-    if (waste.companyTransport === undefined) return FIELD_EMPTY;
-    if (waste.companyTransport === DocumentWasteCompanyLicense.OUTSOURCED) {
-      return (
-        waste.companiesTransport?.map((company) => company.name).join(", ") ??
-        ""
-      );
-    }
-
-    return DOCUMENT_WASTE_COMPANY_LICENSE(waste.companyTransport);
-  }
-
-  function getCompaniesDestination(waste: IDocumentWaste): string {
-    if (waste.companyDestination === undefined) return FIELD_EMPTY;
-    if (waste.companyDestination === DocumentWasteCompanyLicense.OUTSOURCED) {
-      return (
-        waste.companiesDestination?.map((company) => company.name).join(", ") ??
-        ""
-      );
-    }
-
-    return DOCUMENT_WASTE_COMPANY_LICENSE(waste.companyDestination!);
-  }
-
-  document.wastes?.forEach(async (waste: IDocumentWaste) => {
-    const row = [
-      waste.originPoint!.map((origin) => DOCUMENT_WASTE_ORIGIN_POINT(origin)),
-      getClassificationId(classifications, waste.classificationId!),
-      `${waste.quantity} ${DOCUMENT_WASTE_UNIT(
-        waste.unit!
-      )}/${DOCUMENT_WASTE_FREQUENCY(waste.frequency!)}`,
-      DOCUMENT_WASTE_PACKING(waste.packing!),
-      DOCUMENT_WASTE_STORAGE(waste.storage!),
-      waste.treatment !== undefined
-        ? DOCUMENT_WASTE_TREATMENT(waste.treatment)
-        : FIELD_EMPTY,
-      waste.collectionFrequency
-        ? DOCUMENT_FREQUENCY(waste.collectionFrequency!)
-        : FIELD_EMPTY,
-      getCompaniesTransport(waste),
-      getCompaniesDestination(waste),
-    ];
-
-    if (waste.class === DocumentWasteClass.CLASS1) {
-      wastesClassI.push(row);
-    }
-
-    if (waste.class === DocumentWasteClass.CLASS2A) {
-      wastesClassIIa.push(row);
-    }
-
-    if (waste.class === DocumentWasteClass.CLASS2B) {
-      wastesClassIIb.push(row);
-    }
-  });
-
-  function daysOfWeek() {
-    const res = [];
-
-    res.push([
-      document.company?.weekDays
-        .sort()
-        .map((day) => DOCUMENT_WASTE_WEEKDAYS(day))
-        .join(", "),
-    ]);
-
-    document.company?.othersWorkSchedule?.forEach((e) => {
-      const days = e.weekDays
-        .map((day) => DOCUMENT_WASTE_WEEKDAYS(day))
-        .join(", ");
-
-      res.push([days]);
-    });
-
-    return res.join("/ \n");
-  }
-
-  function hoursOfWeek() {
-    const res = [];
-
-    res.push([
-      `${document.company?.hoursDayStart ?? "-"}h - ${
-        document.company?.hoursDayEnd ?? "-"
-      }h`,
-    ]);
-
-    document.company?.othersWorkSchedule?.forEach((e) => {
-      const hours = `${e.hoursDayStart}h - ${e.hoursDayEnd}h`;
-
-      res.push([hours]);
-    });
-
-    return res.join("/ \n");
-  }
-
-  function countEmployees(): number {
-    const admin = document.company?.administrativeEmployeesCount ?? 0;
-    const prod = document.company?.productionEmployeesCount ?? 0;
-
-    return admin + prod;
+  if (!companies.length) {
+    companies.push([]);
   }
 
   document.approved?.timeline?.forEach((e) => {
@@ -389,6 +270,10 @@ export function render({
 
     timeline.push(row);
   });
+
+  if (!timeline.length) {
+    timeline.push([]);
+  }
 
   function daysOfWeekAndHours() {
     const res = [];
@@ -1204,28 +1089,11 @@ export function render({
             marginTop: 20,
           },
           {
-            marginLeft: 15,
-            ul: [
-              "Pontos de geração:",
-              "Empresa responsável pela coleta e destinação:",
-            ],
-          },
-          {
             stack: [
               {
                 table: {
                   widths: [120, 200, "*"],
-                  headerRows: 2,
                   body: [
-                    [
-                      {
-                        text: "MANEJO DOS RESÍDUOS GERADOS, CONFORME LEGISLAÇÃO VIGENTE, NOS DIFERENTES SETORES DO ESTABELECIMENTO",
-                        style: "headerTable",
-                        colSpan: 3,
-                      },
-                      "",
-                      "",
-                    ],
                     [
                       {
                         text: "GRUPO DE RESÍDUOS",
@@ -1242,10 +1110,44 @@ export function render({
                           {
                             columns: [
                               {
-                                text: "GERA ESTE RESÍDUO:",
+                                text: "GERA ESTE RESÍDUO: ",
                                 style: "bodyTable",
                                 bold: true,
-                                width: 110,
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupA ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
                               },
                               {
                                 columns: [
@@ -1283,41 +1185,11 @@ export function render({
                                 width: 40,
                               },
                               {
-                                columns: [
-                                  {
-                                    margin: [0, 1, 0, 0],
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              !Object.keys(groupA ?? {}).length
-                                                ? "X"
-                                                : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2.5,
-                                              y: -3.5,
-                                            },
-                                            fontSize: 11,
-                                            bold: true,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "NÃO",
-                                    style: "bodyTable",
-                                  },
+                                text: [
+                                  "Se ",
+                                  { text: "SIM", style: ["bold"] },
+                                  ", complete o quadro abaixo:",
                                 ],
-                                width: 40,
-                              },
-                              {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
                                 style: "bodyTable",
                                 width: "*",
                               },
@@ -1515,52 +1387,19 @@ export function render({
                         text: "RESÍDUOS INFECTANTES DE RÁPIDA PUTREFAÇÃO",
                         style: "headerTable",
                         colSpan: 2,
+                        pageBreak: "before",
                       },
                       "",
                       {
+                        pageBreak: "before",
                         stack: [
                           {
                             columns: [
                               {
-                                text: "GERA ESTE RESÍDUO:",
+                                text: "GERA ESTE RESÍDUO: ",
                                 style: "bodyTable",
                                 bold: true,
-                                width: 110,
-                              },
-                              {
-                                columns: [
-                                  {
-                                    margin: [0, 1, 0, 0],
-                                    alignment: "left",
-                                    table: {
-                                      heights: [5],
-                                      widths: [2.5],
-                                      body: [
-                                        [
-                                          {
-                                            text: `${
-                                              Object.keys(groupA ?? {}).length
-                                                ? "X"
-                                                : ""
-                                            }`,
-                                            relativePosition: {
-                                              x: -2.5,
-                                              y: -3.5,
-                                            },
-                                            fontSize: 11,
-                                            bold: true,
-                                          },
-                                        ],
-                                      ],
-                                    },
-                                    width: 15,
-                                  },
-                                  {
-                                    text: "SIM",
-                                    style: "bodyTable",
-                                  },
-                                ],
-                                width: 40,
+                                width: 130,
                               },
                               {
                                 columns: [
@@ -1573,7 +1412,9 @@ export function render({
                                         [
                                           {
                                             text: `${
-                                              !Object.keys(groupA ?? {}).length
+                                              !Object.keys(
+                                                groupA?.putrescible ?? {}
+                                              ).length
                                                 ? "X"
                                                 : ""
                                             }`,
@@ -1597,7 +1438,51 @@ export function render({
                                 width: 40,
                               },
                               {
-                                text: "Se assinalar sim, complete o quadro abaixo:",
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(
+                                                groupA?.putrescible ?? {}
+                                              ).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: [
+                                  "Se ",
+                                  {
+                                    text: "SIM",
+                                    style: ["bold"],
+                                  },
+                                  ", complete o quadro abaixo:",
+                                ],
                                 style: "bodyTable",
                                 width: "*",
                               },
@@ -1615,7 +1500,7 @@ export function render({
                               {
                                 text: "Possui sistema de refrigeração:",
                                 style: "boldBodyTable",
-                                width: 150,
+                                width: 160,
                               },
                               {
                                 columns: [
@@ -1700,10 +1585,13 @@ export function render({
                       {
                         text: [
                           {
-                            text: "Se SIM, esclareça qual o sistema utilizado:",
-                            bold: true,
+                            text: [
+                              "Se ",
+                              { text: "SIM", style: ["bold"] },
+                              ", esclareça qual o sistema utilizado: ",
+                            ],
                           },
-                          `\n- ${
+                          ` - ${
                             groupA?.putrescible?.coolingSystem.systemUsed !==
                             undefined
                               ? DOCUMENT_HEALTH_WASTE_PUTRESCIBLE_COOLING_SYSTEM(
@@ -1759,13 +1647,642 @@ export function render({
                     ],
                     [
                       {
-                        text: "IMPORTANTE!!!!",
-                        style: "boldBodyTable",
                         colSpan: 3,
+                        style: "bodyTable",
                         fillColor: "#D9D9D9",
-                        border: [true, true, true, false],
+                        border: [true, false, true, true],
+                        lineHeight: 1,
+                        ul: [
+                          "Os resíduos de fácil putrefação devem ser encaminhados para coleta externa no período máximo de 24 horas, se este tempo for ultrapassado estes deverão ser mantidos em equipamento refrigerado.",
+                        ],
                       },
                       "",
+                      "",
+                    ],
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            pageBreak: "before",
+            stack: [
+              {
+                table: {
+                  widths: [320, "*"],
+                  headerRows: 1,
+                  body: [
+                    [
+                      {
+                        text: "RESÍDUO DE EXPLANTES",
+                        style: "headerTable",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "bodyTable",
+                                bold: true,
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(
+                                                groupA?.explant ?? {}
+                                              ).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupA?.explant ?? {})
+                                                .length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: [
+                                  "Se ",
+                                  { text: "SIM", style: ["bold"] },
+                                  ", complete o quadro abaixo:",
+                                ],
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            text: "É realizado tratamento interno dos resíduos de explantes?",
+                            style: "boldBodyTable",
+                          },
+                          {
+                            columns: [
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text:
+                                              groupA?.explant
+                                                ?.internalTreatment === true
+                                                ? "X"
+                                                : "",
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: !groupA?.explant
+                                              ?.internalTreatment
+                                              ? "X"
+                                              : "",
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: [
+                          "Se ",
+                          { text: "SIM ", bold: true },
+                          "apresente o Procedimento Operacional Padrão - POP adotado para limpeza, higienização, tratamento interno e destinação final do resíduo, anexado ao PGRSS.\nSe ",
+                          { text: "NÃO ", bold: true },
+                          "complete o último quadro abaixo",
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        stack: [
+                          {
+                            text: "Os explantes são entregues ao paciente quando solicitado?",
+                            style: "boldBodyTable",
+                            width: 180,
+                          },
+                          {
+                            columns: [
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              groupA?.explant
+                                                ?.deliveredToPatient.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !groupA?.explant
+                                                ?.deliveredToPatient.exists
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                    bold: true,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        text: `- ${
+                          groupA?.explant?.deliveredToPatient.description ?? ""
+                        }`,
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: [
+                          {
+                            text: "Descrever o procedimento adotado no gerenciamento desse resíduo (acondicionamento, armazenamento, coleta externa - frequência e responsável; tecnologia de tratamento externo e destinação final:\n",
+                            bold: true,
+                          },
+                          `- ${groupA?.explant?.procedures ?? ""}`,
+                        ],
+                        style: "bodyTable",
+                        colSpan: 2,
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        colSpan: 2,
+                        style: "bodyTable",
+                        fillColor: "#D9D9D9",
+                        border: [true, false, true, true],
+                        ul: [
+                          "Verifique a Seção XIII da Resolução RDC n.º 15/2012, referente aos procedimentos estabelecidos para o gerenciamento de resíduos de explantes. ",
+                        ],
+                      },
+                      "",
+                    ],
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            pageBreak: "before",
+            stack: [
+              {
+                text: "GRUPO B",
+                style: ["bold"],
+              },
+              {
+                table: {
+                  widths: [120, 200, "*"],
+                  headerRows: 1,
+                  body: [
+                    [
+                      {
+                        text: "GRUPO DE RESÍDUOS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        text: "B - QUÍMICOS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO: ",
+                                style: "bodyTable",
+                                bold: true,
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupB ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupB ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: [
+                                  "Se ",
+                                  { text: "SIM", style: ["bold"] },
+                                  ", complete o quadro abaixo:",
+                                ],
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos gerados: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: `- ${groupB?.names?.join(", ") ?? FIELD_EMPTY}`,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Pontos de geração de RSS: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupB?.originPoints !== undefined
+                            ? `- ${groupB?.originPoints
+                                .map((origin) =>
+                                  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(origin)
+                                )
+                                .join(", ")}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Forma de acondicionamento: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupB?.packing !== undefined
+                            ? `- ${DOCUMENT_HEALTH_WASTE_PACKING(
+                                groupB?.packing
+                              )}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Quantificação dos resíduos: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupB?.quantity !== undefined
+                            ? `- ${groupB?.quantity} ${DOCUMENT_WASTE_UNIT(
+                                groupB?.unit
+                              )}/${DOCUMENT_WASTE_FREQUENCY(
+                                groupB.frequency!
+                              )} `
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Coleta externa: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Frequência de coleta externa:\n",
+                            bold: true,
+                          },
+                          groupB?.collectionFrequency !== undefined
+                            ? `- ${DOCUMENT_FREQUENCY(
+                                groupB?.collectionFrequency
+                              )}`
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa executora do transporte:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupB?.companyTransport ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupB?.companyTransport ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupB?.companyTransport
+                                )
+                              : groupB?.companiesTransport
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Tratamento externo: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Tecnologia utilizada:\n",
+                            bold: true,
+                          },
+                          `${
+                            groupB?.treatment !== undefined
+                              ? `- ${DOCUMENT_WASTE_TREATMENT(
+                                  groupB?.treatment
+                                )}`
+                              : FIELD_EMPTY
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa executora do tratamento:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupB?.companyDestination ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupB?.companyDestination ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupB?.companyTransport
+                                )
+                              : groupB?.companiesTransport
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Disposição final: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa receptora final dos resíduos:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupB?.companyDestination ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupB?.companyDestination ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupB?.companyDestination
+                                )
+                              : groupB?.companiesDestination
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                        colSpan: 2,
+                      },
                       "",
                     ],
                     [
@@ -1774,9 +2291,1283 @@ export function render({
                         style: "bodyTable",
                         fillColor: "#D9D9D9",
                         border: [true, false, true, true],
+                        lineHeight: 1,
                         ul: [
-                          "Os resíduos de fácil putrefação devem ser encaminhados para coleta externa no período máximo de 24 horas, se este tempo for ultrapassado estes deverão ser mantidos em equipamento refrigerado.",
+                          "O armazenamento de resíduos químicos deve atender à NBR n.º 12.235 da ABNT. ",
+                          "Verificar as orientações constantes nas fichas de segurança dos produtos químicos – FISPQ. Caso possuam características de periculosidade, os frascos vazios não podem ser classificados como recicláveis e as embalagens devem receber tratamento e/ou disposição final igual ao resíduo que os contaminou (Resolução RDC n.º 222/2018 da ANVISA, Resolução RDC n.º 56/2008 da ANVISA). Se a FISPQ indicar deverá seguir as determinações do órgão ambiental competente, esta SMMA, baseada no princípio de precaução, determina que deve ser segregado e encaminhado para tratamento e/ou disposição final ambientalmente adequada como Resíduo Perigoso – Classe I",
+                          "Vedado o descarte do resíduo Químico Perigoso – Classe I no solo, na rede de esgotamento sanitário ou de águas pluviais, ou como resíduo comum não-reciclável e reciclável.",
                         ],
+                      },
+                      "",
+                      "",
+                    ],
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            pageBreak: "before",
+            stack: [
+              {
+                text: "GRUPO C",
+                style: ["bold"],
+              },
+              {
+                table: {
+                  widths: [120, 200, "*"],
+                  headerRows: 1,
+                  body: [
+                    [
+                      {
+                        text: "GRUPO DE RESÍDUOS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        text: "C - RADIOATIVOS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "bodyTable",
+                                bold: true,
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupC ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupC ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        colSpan: 3,
+                        style: "bodyTable",
+                        fillColor: "#D9D9D9",
+                        border: [true, false, true, true],
+                        ul: [
+                          "Fontes radioativas devem seguir as determinações da CNEN.",
+                        ],
+                      },
+                      "",
+                      "",
+                    ],
+                  ],
+                },
+              },
+              {
+                text: "GRUPO D",
+                style: ["bold"],
+                marginTop: 30,
+              },
+              {
+                margin: [0, 0, 0, 10],
+                table: {
+                  widths: [120, 200, "*"],
+                  headerRows: 1,
+                  body: [
+                    [
+                      {
+                        text: "GRUPO DE RESÍDUOS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        text: "D – COMUNS NÃO RECICLÁVEIS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "bodyTable",
+                                bold: true,
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupDNR ?? {})
+                                                .length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupDNR ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: [
+                                  "Se ",
+                                  { text: "SIM", style: ["bold"] },
+                                  ", complete os quadros abaixo:",
+                                ],
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos gerados: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: `-${groupDNR?.names?.join(", ") ?? FIELD_EMPTY}`,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Pontos de geração de RSS: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupDNR?.originPoints !== undefined
+                            ? `- ${groupDNR?.originPoints
+                                .map((origin) =>
+                                  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(origin)
+                                )
+                                .join(", ")}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Forma de acondicionamento: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupDNR?.packing !== undefined
+                            ? `- ${DOCUMENT_HEALTH_WASTE_PACKING(
+                                groupDNR?.packing
+                              )}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Quantificação dos resíduos: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupDNR?.quantity !== undefined
+                            ? `- ${groupDNR?.quantity} ${DOCUMENT_WASTE_UNIT(
+                                groupDNR?.unit
+                              )}/${DOCUMENT_WASTE_FREQUENCY(
+                                groupDNR.frequency!
+                              )} `
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Coleta externa: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Frequência de coleta externa:\n",
+                            bold: true,
+                          },
+                          groupDNR?.collectionFrequency !== undefined
+                            ? `- ${DOCUMENT_FREQUENCY(
+                                groupDNR?.collectionFrequency
+                              )}`
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                alignment: "left",
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          groupDNR?.companyTransport ===
+                                          DocumentWasteCompanyLicense.CITY_HALL
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "Coleta Pública",
+                                style: "boldBodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          groupDNR?.companyTransport ===
+                                          DocumentWasteCompanyLicense.OWN_BUSINESS
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "Coleta Própria",
+                                style: "boldBodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          groupDNR?.companyTransport ===
+                                          DocumentWasteCompanyLicense.OUTSOURCED
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "Empresa contratada",
+                                style: "boldBodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            text: [
+                              {
+                                text: "Nome da empresa contratada:\n",
+                                bold: true,
+                              },
+                              `${
+                                groupDNR?.companyTransport ===
+                                DocumentWasteCompanyLicense.OUTSOURCED
+                                  ? groupDNR?.companiesTransport
+                                      ?.map((companys) => companys.name)
+                                      .join(", ")
+                                  : " "
+                              }`,
+                            ],
+                            style: "bodyTable",
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: "Disposição final:",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa receptora final dos resíduos:\n",
+                            bold: true,
+                          },
+
+                          `- ${
+                            groupDNR?.companyDestination ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupDNR?.companyDestination ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupDNR?.companyDestination
+                                )
+                              : groupDNR?.companiesDestination
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                        colSpan: 2,
+                      },
+                      "",
+                    ],
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            stack: [
+              {
+                pageBreak: "before",
+                table: {
+                  widths: [120, 200, "*"],
+                  headerRows: 1,
+                  body: [
+                    [
+                      {
+                        text: "GRUPO DE RESÍDUOS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        text: "D – COMUNS RECICLÁVEIS",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "boldBodyTable",
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupDR ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupDR ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: [
+                                  "Se assinalar ",
+                                  { text: "SIM", style: ["bold"] },
+                                  ", complete os quadros abaixo:",
+                                ],
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos gerados: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: `- ${groupDR?.names?.join(", ") ?? FIELD_EMPTY}`,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Pontos de geração de RSS: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupDR?.originPoints !== undefined
+                            ? `- ${groupDR?.originPoints
+                                .map((origin) =>
+                                  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(origin)
+                                )
+                                .join(", ")}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Forma de acondicionamento: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupDR?.packing !== undefined
+                            ? `- ${DOCUMENT_HEALTH_WASTE_PACKING(
+                                groupDR?.packing
+                              )}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Quantificação dos resíduos: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupDR?.quantity !== undefined
+                            ? `- ${groupDR?.quantity} ${DOCUMENT_WASTE_UNIT(
+                                groupDR?.unit
+                              )}/${DOCUMENT_WASTE_FREQUENCY(
+                                groupDR.frequency!
+                              )} `
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Coleta externa: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Frequência de coleta externa:\n",
+                            bold: true,
+                          },
+                          groupDR?.collectionFrequency !== undefined
+                            ? `- ${DOCUMENT_FREQUENCY(
+                                groupDR?.collectionFrequency
+                              )}`
+                            : FIELD_EMPTY,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                alignment: "left",
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          groupDR?.companyTransport ===
+                                          DocumentWasteCompanyLicense.CITY_HALL
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "Coleta Pública",
+                                style: "boldBodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                alignment: "left",
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          groupDR?.companyTransport ===
+                                          DocumentWasteCompanyLicense.OWN_BUSINESS
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "Coleta Própria",
+                                style: "boldBodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            columns: [
+                              {
+                                margin: [0, 1, 0, 0],
+                                table: {
+                                  heights: [5],
+                                  widths: [2.5],
+                                  body: [
+                                    [
+                                      {
+                                        text: `${
+                                          groupDR?.companyTransport ===
+                                          DocumentWasteCompanyLicense.OUTSOURCED
+                                            ? "X"
+                                            : ""
+                                        }`,
+                                        relativePosition: {
+                                          x: -2.5,
+                                          y: -3.5,
+                                        },
+                                        fontSize: 11,
+                                        bold: true,
+                                      },
+                                    ],
+                                  ],
+                                },
+                                width: 15,
+                              },
+                              {
+                                text: "Empresa contratada",
+                                style: "boldBodyTable",
+                              },
+                            ],
+                            width: 40,
+                          },
+                          {
+                            text: [
+                              {
+                                text: "Nome da empresa contratada: ",
+                                bold: true,
+                              },
+                              `${
+                                groupDR?.companyTransport ===
+                                DocumentWasteCompanyLicense.OUTSOURCED
+                                  ? groupDR?.companiesTransport
+                                      ?.map((companys) => companys.name)
+                                      .join(", ")
+                                  : " "
+                              }`,
+                            ],
+                            style: "bodyTable",
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: "Disposição final: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa receptora final dos resíduos:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupDR?.companyDestination ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupDR?.companyDestination ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupDR?.companyDestination
+                                )
+                              : groupDR?.companiesDestination
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                        colSpan: 2,
+                      },
+                      "",
+                    ],
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            stack: [
+              {
+                pageBreak: "before",
+                table: {
+                  widths: [120, 200, "*"],
+                  headerRows: 1,
+                  body: [
+                    [
+                      {
+                        text: "GRUPO DE RESÍDUOS",
+                        style: "headerTable",
+                        alignment: "center",
+                        lineHeight: 1,
+                      },
+                      {
+                        lineHeight: 1,
+                        text: "E – PERFUROCORTANTES\nRisco Adicional Infectante",
+                        style: "headerTable",
+                        alignment: "center",
+                      },
+                      {
+                        lineHeight: 1,
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "boldBodyTable",
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(groupE ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(groupE ?? {}).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: [
+                                  "Se ",
+                                  {
+                                    text: "SIM",
+                                    style: ["bold"],
+                                  },
+                                  ", complete o quadro abaixo:",
+                                ],
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos gerados: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: `- ${groupE?.names?.join(", ") ?? FIELD_EMPTY}`,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Pontos de geração de RSS: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupE?.originPoints !== undefined
+                            ? `- ${groupE?.originPoints
+                                .map((origin) =>
+                                  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(origin)
+                                )
+                                .join(", ")}`
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Forma de acondicionamento: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: `- ${
+                          groupE?.packing !== undefined
+                            ? DOCUMENT_HEALTH_WASTE_PACKING(groupE?.packing)
+                            : ""
+                        }`,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Quantificação dos resíduos: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text:
+                          groupE?.quantity !== undefined
+                            ? `- ${groupE?.quantity} ${DOCUMENT_WASTE_UNIT(
+                                groupE?.unit
+                              )}/${DOCUMENT_WASTE_FREQUENCY(
+                                groupE.frequency!
+                              )} `
+                            : FIELD_EMPTY,
+                        colSpan: 2,
+                        style: "bodyTable",
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "Coleta externa: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Frequência de coleta externa:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupE?.collectionFrequency !== undefined
+                              ? DOCUMENT_FREQUENCY(groupE?.collectionFrequency)
+                              : ""
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa executora do transporte:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupE?.companyTransport ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupE?.companyTransport ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupE?.companyTransport
+                                )
+                              : groupE?.companiesTransport
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Tratamento externo: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Tecnologia utilizada:\n",
+                            bold: true,
+                          },
+                          `${
+                            groupE?.treatment !== undefined
+                              ? `- ${DOCUMENT_WASTE_TREATMENT(
+                                  groupE?.treatment
+                                )}`
+                              : FIELD_EMPTY
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa executora do tratamento:\n",
+                            bold: true,
+                          },
+                          `- ${
+                            groupE?.companiesDestination
+                              ?.map((companys) => companys.name)
+                              .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Disposição final: ",
+                        style: "boldBodyTable",
+                      },
+                      {
+                        text: [
+                          {
+                            text: "Razão Social da empresa receptora final dos resíduos:\n",
+                            bold: true,
+                          },
+
+                          `-${
+                            groupE?.companyDestination ===
+                              DocumentWasteCompanyLicense.CITY_HALL ||
+                            groupE?.companyDestination ===
+                              DocumentWasteCompanyLicense.OWN_BUSINESS
+                              ? DOCUMENT_WASTE_COMPANY_LICENSE(
+                                  groupE?.companyDestination
+                                )
+                              : groupE?.companiesDestination
+                                  ?.map((companys) => companys.name)
+                                  .join(", ") ?? " "
+                          }`,
+                        ],
+                        style: "bodyTable",
+                        colSpan: 2,
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "GRUPO DE RESÍDUOS",
+                        style: "headerTable",
+                        alignment: "center",
+                        lineHeight: 1,
+                      },
+                      {
+                        text: "E – PERFUROCORTANTES Risco\nAdicional Químico ou Quimioterápico",
+                        style: "headerTable",
+                        alignment: "center",
+                        lineHeight: 1,
+                      },
+                      {
+                        lineHeight: 1,
+                        stack: [
+                          {
+                            columns: [
+                              {
+                                text: "GERA ESTE RESÍDUO:",
+                                style: "bodyTable",
+                                bold: true,
+                                width: 130,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              !Object.keys(
+                                                groupE?.chemicalDangerProcedures ??
+                                                  {}
+                                              ).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "NÃO",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                columns: [
+                                  {
+                                    margin: [0, 1, 0, 0],
+                                    alignment: "left",
+                                    table: {
+                                      heights: [5],
+                                      widths: [2.5],
+                                      body: [
+                                        [
+                                          {
+                                            text: `${
+                                              Object.keys(
+                                                groupE?.chemicalDangerProcedures ??
+                                                  {}
+                                              ).length
+                                                ? "X"
+                                                : ""
+                                            }`,
+                                            relativePosition: {
+                                              x: -2.5,
+                                              y: -3.5,
+                                            },
+                                            fontSize: 11,
+                                            bold: true,
+                                          },
+                                        ],
+                                      ],
+                                    },
+                                    width: 15,
+                                  },
+                                  {
+                                    text: "SIM",
+                                    style: "bodyTable",
+                                  },
+                                ],
+                                width: 40,
+                              },
+                              {
+                                text: [
+                                  "Se ",
+                                  { text: "SIM", style: ["bold"] },
+                                  ", complete os quadros abaixo:",
+                                ],
+                                style: "bodyTable",
+                                width: "*",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    [
+                      {
+                        text: [
+                          {
+                            text: "Descrever o procedimento adotado no gerenciamento desse resíduo (acondicionamento, armazenamento, coleta externa, tecnologia de tratamento externo e destinação final:\n",
+                            bold: true,
+                          },
+                          `- ${groupE?.chemicalDangerProcedures ?? ""}`,
+                        ],
+                        colSpan: 3,
+                        style: "bodyTable",
                       },
                       "",
                       "",
@@ -1794,7 +3585,7 @@ export function render({
         pageOrientation: "portrait",
         stack: [
           {
-            text: "5.2 COLETA INTERNA",
+            text: "5.1 COLETA INTERNA",
             style: ["bold"],
           },
           {
@@ -1961,30 +3752,30 @@ export function render({
               ],
             },
           },
-          // {
-          //   layout: {
-          //     fillColor: function (rowIndex) {
-          //       return rowIndex % 2 === 0 ? "#EAF1DD" : null;
-          //     },
-          //     hLineColor: function () {
-          //       return "#C2D69B";
-          //     },
-          //     vLineColor: function () {
-          //       return "#C2D69B";
-          //     },
-          //     hLineWidth: function () {
-          //       return 0.1;
-          //     },
-          //     vLineWidth: function () {
-          //       return 0.1;
-          //     },
-          //   },
-          //   style: ["center"],
-          //   table: {
-          //     widths: ["*", "*"],
-          //     body: [...companys],
-          //   },
-          // },
+          {
+            layout: {
+              fillColor: function (rowIndex) {
+                return rowIndex % 2 === 0 ? "#EAF1DD" : null;
+              },
+              hLineColor: function () {
+                return "#C2D69B";
+              },
+              vLineColor: function () {
+                return "#C2D69B";
+              },
+              hLineWidth: function () {
+                return 0.1;
+              },
+              vLineWidth: function () {
+                return 0.1;
+              },
+            },
+            style: ["center"],
+            table: {
+              widths: ["*", "*"],
+              body: [...companies],
+            },
+          },
         ],
       },
       {
@@ -2253,7 +4044,7 @@ export function render({
                                 style: "bodyTable",
                               },
                             ],
-                            width: 40,
+                            width: 50,
                           },
                           {
                             text: [
@@ -2307,7 +4098,7 @@ export function render({
                               {
                                 text: "Existe abrigo para armazenamento dos resíduos?",
                                 style: "boldBodyTable",
-                                width: 250,
+                                width: 270,
                               },
                               {
                                 columns: [
@@ -2395,7 +4186,7 @@ export function render({
                               {
                                 text: "Quais tipos de resíduos são armazenados?",
                                 style: "boldBodyTable",
-                                width: 250,
+                                width: 230,
                               },
                               {
                                 columns: [
@@ -2432,7 +4223,7 @@ export function render({
                                     style: "bodyTable",
                                   },
                                 ],
-                                width: 150,
+                                width: 160,
                               },
                               {
                                 columns: [
@@ -2504,7 +4295,7 @@ export function render({
                                     style: "bodyTable",
                                   },
                                 ],
-                                width: 70,
+                                width: 80,
                               },
                               {
                                 columns: [
@@ -2576,7 +4367,7 @@ export function render({
                                     style: "bodyTable",
                                   },
                                 ],
-                                width: 70,
+                                width: 75,
                               },
                             ],
                           },
@@ -2593,7 +4384,7 @@ export function render({
                               {
                                 text: "O abrigo possui identificação dos tipos de resíduos armazenados?",
                                 style: "boldBodyTable",
-                                width: 290,
+                                width: 360,
                               },
                               {
                                 columns: [
@@ -2681,7 +4472,7 @@ export function render({
                               {
                                 text: "O abrigo possui compartimentos específicos para cada resíduo armazenado?",
                                 style: "boldBodyTable",
-                                width: 350,
+                                width: 415,
                               },
                               {
                                 columns: [
@@ -2764,13 +4555,12 @@ export function render({
                       {
                         stack: [
                           {
+                            text: "Os pisos e paredes são revestidos de material liso, lavável e impermeável?",
+                            style: "boldBodyTable",
+                            margin: [0, 0, 0, 0],
+                          },
+                          {
                             columns: [
-                              {
-                                text: "Os pisos e paredes são revestidos de material liso, lavável e impermeável?",
-                                style: "boldBodyTable",
-                                margin: [0, 0, 0, 0],
-                                width: 310,
-                              },
                               {
                                 columns: [
                                   {
@@ -3382,7 +5172,7 @@ export function render({
                               {
                                 text: "Possui porta com sistema de fechamento? ",
                                 style: "boldBodyTable",
-                                width: 200,
+                                width: 230,
                               },
                               {
                                 columns: [
@@ -3486,12 +5276,11 @@ export function render({
                       {
                         stack: [
                           {
+                            text: "O abrigo é de uso compartilhado com Sala de Utilidades? ",
+                            style: "boldBodyTable",
+                          },
+                          {
                             columns: [
-                              {
-                                text: "O abrigo é de uso compartilhado com Sala de Utilidades? ",
-                                style: "boldBodyTable",
-                                width: 250,
-                              },
                               {
                                 columns: [
                                   {
@@ -3761,123 +5550,30 @@ export function render({
               ],
             },
           },
-          // {
-          //   margin: [20, 0],
-          //   layout: {
-          //     fillColor: function (rowIndex) {
-          //       return rowIndex % 2 === 0 ? "#EAF1DD" : null;
-          //     },
-          //     hLineColor: function () {
-          //       return "#C2D69B";
-          //     },
-          //     vLineColor: function () {
-          //       return "#C2D69B";
-          //     },
-          //     hLineWidth: function () {
-          //       return 0.1;
-          //     },
-          //     vLineWidth: function () {
-          //       return 0.1;
-          //     },
-          //   },
-          //   style: ["center"],
-          //   table: {
-          //     widths: ["*", "*"],
-          //     body: [...timeline],
-          //   },
-          // },
-        ],
-      },
-      {
-        style: ["text-justify"],
-        pageBreak: "before",
-        stack: [
-          { text: "ANEXO I - SIGLAS E DEFINIÇÕES", style: ["bold", "center"] },
           {
-            text: [
-              { text: "Resíduos sólidos:", style: ["bold"] },
-              " resíduos nos estados sólidos e semissólidos, que resultam de atividades da comunidade de origem industrial, doméstica, hospitalar, comercial, agrícola, de serviços de varrição. Ficam incluídos nesta definição os lodos provenientes de sistemas de tratamento de água, aqueles gerados em equipamentos e instalações de controle de poluição, bem como determinados líquidos cujas particularidades tornem inviável seu lançamento na rede pública de esgotos ou corpos d’água, ou exijam para isso soluções técnica e economicamente inviáveis, em face da melhor tecnologia disponível (NBR 10004).",
-            ],
-            marginTop: 25,
-          },
-          {
-            text: [
-              {
-                text: "PGRS - Plano de Gerenciamento de Resíduos Sólidos:",
-                style: ["bold"],
+            margin: [20, 0],
+            layout: {
+              fillColor: function (rowIndex) {
+                return rowIndex % 2 === 0 ? "#EAF1DD" : null;
               },
-              " documento integrante do processo de licenciamento ambiental, que aponta e descreve as ações relativas ao manejo de resíduos sólidos, contemplando os aspectos referentes à geração, segregação, acondicionamento, coleta, armazenamento, transporte, tratamento e disposição final, bem como a proteção à saúde pública.",
-            ],
-            marginTop: 25,
-          },
-          {
-            text: [
-              {
-                text: "Reciclagem:",
-                style: ["bold"],
+              hLineColor: function () {
+                return "#C2D69B";
               },
-              " processo de reaproveitamento de um mesmo material com o intuito de fabricar o mesmo produto, ou similar, mas com economia de matéria-prima.",
-            ],
-            marginTop: 25,
-          },
-          {
-            text: [
-              {
-                text: "Compostagem:",
-                style: ["bold"],
+              vLineColor: function () {
+                return "#C2D69B";
               },
-              " Operação de tratamento de resíduo sólido controlada de decomposição biológica da matéria orgânica presente no lixo, utilizando-se microorganismos existentes nos resíduos, em condições adequadas de aeração, umidade e temperatura. Esta operação gera um produto biologicamente estável chamado de composto orgânico.",
-            ],
-            marginTop: 25,
-          },
-          {
-            text: [
-              {
-                text: "Resíduos classe I - Perigosos:",
-                style: ["bold"],
+              hLineWidth: function () {
+                return 0.1;
               },
-              " São classificados como resíduos classe I ou perigosos, os resíduos ou mistura de resíduos que, em função de suas características de inflamabilidade, corrosividade, reatividade, toxicidade e patogenicidade, podem apresentar risco à saúde pública, provocando ou contribuindo para um aumento de mortalidade ou incidência de doenças e/ou apresentar efeitos adversos ao meio ambiente, quando manuseados ou dispostos de forma inadequada. Os resíduos industriais e alguns domésticos, como restos de tintas, solventes, aerosóis, produtos de limpeza, lâmpadas fluorescentes, medicamentos vencidos, pilhas e outros, contêm significativa quantidade de substâncias químicas nocivas ao meio ambiente.",
-            ],
-            marginTop: 25,
-          },
-          {
-            text: [
-              {
-                text: "Resíduos Classe II A – Não inertes:",
-                style: ["bold"],
+              vLineWidth: function () {
+                return 0.1;
               },
-              " São classificados como II A ou resíduos não inertes, os resíduos sólidos ou mistura de resíduos sólidos que não se enquadram na Classe I - perigosos ou na Classe III ou II B- inertes. Estes resíduos podem ter propriedades tais como: combustibilidade, biodegradabilidade ou solubilidade em água. Como exemplos destes materiais, pode-se citar: certos lodos de ETE, orgânicos, papéis e etc.",
-            ],
-            marginTop: 25,
-          },
-          {
-            text: [
-              {
-                text: "Resíduos Classe II B – Inertes:",
-                style: ["bold"],
-              },
-              ' São classificados II B ou resíduos inertes, os resíduos sólidos ou mistura de resíduos sólidos que, submetidos ao teste de solubilização (Norma NBR 10006 - "Solubilização de resíduos - Procedimento") não tenham nenhum de seus constituintes solubilizados em concentrações superiores aos padrões definidos na Listagem 8 - " Padrões para o Teste de Solubilização". Como exemplos destes materiais, pode-se citar: rochas, tijolos, vidros e certos plásticos e borrachas que não são facilmente decompostos.',
-            ],
-            marginTop: 25,
-          },
-          "Os resíduos inertes não podem ser solúveis nem inflamáveis, nem ter qualquer outro tipo de reação física ou química e não podem ser biodegradáveis, nem afetar negativamente outras substâncias com as quais entrem em contato, de forma suscetível de aumentar a poluição do ambiente ou prejudicar a saúde humana.",
-          {
-            text: [
-              {
-                text: "Coleta seletiva:",
-                style: ["bold"],
-              },
-              " Coleta seletiva de lixo é um processo que consiste na separação e recolhimento dos resíduos descartados por empresas e pessoas. Desta forma, os materiais que podem ser reciclados são separados do lixo orgânico (restos de carne, frutas, verduras e outros alimentos). Este último tipo de lixo é descartado em aterros sanitários ou usado para a fabricação de adubos orgânicos.",
-            ],
-            marginTop: 25,
-          },
-          {
-            text: "No sistema de coleta seletiva, os materiais recicláveis são separados em: papéis, plásticos, metais e vidros. Existem indústrias que reutilizam estes materiais para a fabricação de matéria-prima ou até mesmo de outros produtos.",
-            marginTop: 25,
-          },
-          {
-            text: "Pilhas e baterias também são separadas, pois quando descartadas no meio ambiente provocam  contaminação do solo. Embora não possam ser reutilizados, estes materiais ganham um destino apropriado para não gerarem a poluição do meio ambiente.",
-            marginTop: 25,
+            },
+            style: ["center"],
+            table: {
+              widths: ["*", "*"],
+              body: [...timeline],
+            },
           },
         ],
       },
@@ -3888,15 +5584,60 @@ export function render({
           {
             text: "________________________________________",
             style: ["bold"],
-            marginTop: 200,
+            marginTop: 100,
           },
-          { text: "MSC. PEDRO AMERICO DUARTE", fontSize: 16 },
-          { text: "DAVINCI CONSULTORIA", style: ["bold"], fontSize: 10.5 },
-          { text: "MEIO AMBIENTE", style: ["bold"], fontSize: 10.5 },
+          { text: "MSC. PEDRO AMERICO DUARTE", fontSize: 11, style: ["bold"] },
+          { text: "DAVINCI CONSULTORIA", style: ["bold"], fontSize: 11 },
+          { text: "MEIO AMBIENTE", style: ["bold"], fontSize: 11 },
           { text: "Av. Vicente Machado, 467 cj 102", marginTop: 15 },
           { text: "Centro" },
           { text: "Curitiba - PR, 80420-010" },
           { text: "Fone: (41) 3011-4500" },
+        ],
+      },
+      {
+        alignment: "center",
+        stack: [
+          {
+            text: "________________________________________",
+            style: ["bold"],
+            marginTop: 100,
+          },
+          {
+            text:
+              document.responsibles?.legal?.name?.toUpperCase() ?? FIELD_EMPTY,
+            style: ["bold"],
+            fontSize: 11,
+          },
+          {
+            text: document.company?.name?.toUpperCase() ?? FIELD_EMPTY,
+            style: ["bold"],
+            marginTop: 5,
+            fontSize: 11,
+          },
+        ],
+      },
+      {
+        alignment: "center",
+        stack: [
+          {
+            text: "________________________________________",
+            style: ["bold"],
+            marginTop: 100,
+          },
+          {
+            text:
+              document.responsibles?.techinical?.name?.toUpperCase() ??
+              FIELD_EMPTY,
+            style: ["bold"],
+            fontSize: 10.5,
+          },
+          {
+            text: document.company?.name?.toUpperCase() ?? FIELD_EMPTY,
+            style: ["bold"],
+            marginTop: 5,
+            fontSize: 10.5,
+          },
         ],
       },
     ],
@@ -3948,7 +5689,9 @@ export function render({
         fontSize: 10,
         fillColor: "#D9D9D9",
         bold: true,
-        font: "Arial",
+      },
+      boldBodyTable: {
+        bold: true,
       },
     },
   };

@@ -1,6 +1,22 @@
 import { TableCell, TDocumentDefinitions } from "pdfmake/interfaces";
-import { IRenderReq } from "../../types/template/interface";
 import {
+  DocumentCompanyPeoplesInvolved,
+  DocumentHealthWasteClass,
+  DocumentWasteCompanyLicense,
+  DocumentWasteFrequency,
+  DocumentWasteUnit,
+  IDocumentWasteContainmentAccident,
+} from "../../types/document/enum";
+import {
+  IDocumentApprovedGoals,
+  IDocumentHealthWaste,
+  IDocumentHealthWasteClassA,
+  IDocumentHealthWasteClassE,
+} from "../../types/document/interface";
+import {
+  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT,
+  DOCUMENT_HEALTH_WASTE_PACKING,
+  DOCUMENT_WASTE_UNIT_LONG,
   DOCUMENT_APPROVED_GOAL_DECREASEELETRONICS,
   DOCUMENT_APPROVED_GOAL_DECREASEFOODWASTE,
   DOCUMENT_APPROVED_GOAL_DECREASEGASES,
@@ -10,53 +26,25 @@ import {
   DOCUMENT_APPROVED_GOAL_IMPLEMENTWATERREUSE,
   DOCUMENT_APPROVED_GOAL_INCREASERECYCLABLERATE,
   DOCUMENT_APPROVED_GOAL_REUSE,
+  DOCUMENT_FREQUENCY,
   DOCUMENT_WASTE_COMPANY_LICENSE,
   DOCUMENT_WASTE_CONTAINMENT_ACCIDENT,
-  DOCUMENT_WASTE_EXTERNAL_PACKAGING,
   DOCUMENT_WASTE_FREQUENCY,
-  DOCUMENT_WASTE_ORIGIN_POINT,
-  DOCUMENT_WASTE_PACKING,
   DOCUMENT_WASTE_TREATMENT,
-  DOCUMENT_WASTE_UNIT,
   DOCUMENT_WASTE_WEEKDAYS,
   LOCALE,
-} from "../../resource";
-import {
-  IDocumentApprovedGoals,
-  IDocumentHealthWaste,
-  IDocumentHealthWasteClassA,
-  IDocumentHealthWasteClassE,
-  IDocumentWaste,
-} from "../../types/document/interface";
-import {
-  DocumentCompanyPeoplesInvolved,
-  DocumentHealthWasteClass,
-  DocumentWasteClass,
-  DocumentWasteCompanyLicense,
-  DocumentWasteFrequency,
-  DocumentWasteOriginPoint,
-  DocumentWasteUnit,
-  IDocumentWasteContainmentAccident,
-} from "../../types/document/enum";
-import {
-  FIELD_EMPTY,
-  getCollectionFrequency,
-  getMaskedUsername,
-} from "../../types/template/utils";
+} from "../../types/document/resource";
+import { IRenderReq } from "../../types/template/interface";
+import { FIELD_EMPTY, getMaskedUsername } from "../../types/template/utils";
 import {
   cnpjMask,
   cpfMask,
   dateFormat,
-  getClassificationId,
   getCnaeId,
   Months,
   phoneMask,
   setUpAddress,
 } from "../../utils";
-import {
-  DOCUMENT_HEALTH_WASTE_ORIGIN_POINT,
-  DOCUMENT_WASTE_UNIT_LONG,
-} from "../../types/document/resource";
 
 const logo = "http://localhost:5173/foz-do-iguacu-pr.jpeg";
 
@@ -92,8 +80,8 @@ export function render({
 
     return acc;
   }, {} as Record<GroupKeyMapValue, IDocumentHealthWaste>) ?? {};
-  const groupA = groupANoType as IDocumentHealthWasteClassA;
-  const groupE = groupENoType as IDocumentHealthWasteClassE;
+  const groupA = groupANoType as IDocumentHealthWasteClassA | undefined;
+  const groupE = groupENoType as IDocumentHealthWasteClassE | undefined;
 
   const timeline: TableCell[][] = [];
 
@@ -120,10 +108,10 @@ export function render({
     return res.join("/ \n\n");
   }
 
-  function getCompaniesTransport(waste: IDocumentWaste): string {
+  function getCompaniesTransport(waste?: IDocumentHealthWaste): string {
     if (
-      waste.companyTransport === undefined ||
-      waste.companyTransport === DocumentWasteCompanyLicense.NONE
+      waste?.companyTransport === undefined ||
+      waste?.companyTransport === DocumentWasteCompanyLicense.NONE
     )
       return FIELD_EMPTY;
 
@@ -137,10 +125,10 @@ export function render({
     return DOCUMENT_WASTE_COMPANY_LICENSE(waste.companyTransport);
   }
 
-  function getCompaniesDestination(waste: IDocumentWaste): string {
+  function getCompaniesDestination(waste?: IDocumentHealthWaste): string {
     if (
-      waste.companyDestination === undefined ||
-      waste.companyDestination === DocumentWasteCompanyLicense.NONE
+      waste?.companyDestination === undefined ||
+      waste?.companyDestination === DocumentWasteCompanyLicense.NONE
     )
       return FIELD_EMPTY;
 
@@ -151,7 +139,7 @@ export function render({
       );
     }
 
-    return DOCUMENT_WASTE_COMPANY_LICENSE(waste.companyDestination);
+    return DOCUMENT_WASTE_COMPANY_LICENSE(waste.companyDestination!);
   }
 
   function getPeopleInvolved(value: DocumentCompanyPeoplesInvolved): string {
@@ -223,7 +211,7 @@ export function render({
 
   setTimeline();
 
-  function setGroupQuantity(
+  function getGroupQuantity(
     quantity?: number,
     unit?: DocumentWasteUnit,
     frequency?: DocumentWasteFrequency
@@ -236,7 +224,7 @@ export function render({
       return FIELD_EMPTY;
     }
 
-    return `( ${quantity.toLocaleString(LOCALE)} ) ${DOCUMENT_WASTE_UNIT_LONG(
+    return `${quantity.toLocaleString(LOCALE)} ${DOCUMENT_WASTE_UNIT_LONG(
       unit
     )} por ${DOCUMENT_WASTE_FREQUENCY(frequency)}`;
   }
@@ -713,6 +701,7 @@ export function render({
             stack: [
               {
                 table: {
+                  dontBreakRows: true,
                   widths: [100, "*"],
                   body: [
                     [
@@ -735,11 +724,11 @@ export function render({
                     ],
                     [
                       {
-                        text: "Resíduo Gerado",
+                        text: "Resíduos Gerado",
                         colSpan: 1,
                         style: "field",
                       },
-                      groupA.names?.join(", ") ?? "",
+                      { text: groupA?.names?.join(", ") ?? "", style: "field" },
                     ],
                     [
                       {
@@ -747,11 +736,15 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      groupA.originPoints
-                        ?.map((item) =>
-                          DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(item)
-                        )
-                        .join(", ") ?? "",
+                      {
+                        text:
+                          groupA?.originPoints
+                            ?.map((item) =>
+                              DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(item)
+                            )
+                            .join(", ") ?? "",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -759,7 +752,14 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: getGroupQuantity(
+                          groupA?.quantity,
+                          groupA?.unit,
+                          groupA?.frequency
+                        ),
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -767,7 +767,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupA?.packing
+                          ? DOCUMENT_HEALTH_WASTE_PACKING(groupA?.packing)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -775,7 +780,7 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: "-", style: "field" },
                     ],
                     [
                       {
@@ -783,7 +788,10 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: "Não há – somente resíduos sólidos",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -791,7 +799,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupA?.collectionFrequency
+                          ? DOCUMENT_FREQUENCY(groupA?.collectionFrequency)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -799,7 +812,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupA?.treatment
+                          ? DOCUMENT_WASTE_TREATMENT(groupA?.treatment)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -807,7 +825,7 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: getCompaniesTransport(groupA), style: "field" },
                     ],
                     [
                       {
@@ -815,11 +833,11 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: getCompaniesDestination(groupA), style: "field" },
                     ],
                     [
                       {
-                        text: "Resíduos não inertes (Classe IIA)",
+                        text: "Resíduos químicos (Grupo B)",
                         colSpan: 2,
                         style: "title",
                         bold: true,
@@ -837,11 +855,11 @@ export function render({
                     ],
                     [
                       {
-                        text: "Resíduo Gerado",
+                        text: "Resíduos Gerado",
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: groupB?.names?.join(", ") ?? "", style: "field" },
                     ],
                     [
                       {
@@ -849,7 +867,15 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text:
+                          groupB?.originPoints
+                            ?.map((item) =>
+                              DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(item)
+                            )
+                            .join(", ") ?? "",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -857,7 +883,14 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: getGroupQuantity(
+                          groupB?.quantity,
+                          groupB?.unit,
+                          groupB?.frequency
+                        ),
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -865,7 +898,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupB?.packing
+                          ? DOCUMENT_HEALTH_WASTE_PACKING(groupB?.packing)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -873,7 +911,7 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: "-", style: "field" },
                     ],
                     [
                       {
@@ -881,7 +919,10 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: "Não há – somente resíduos sólidos",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -889,7 +930,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupB?.collectionFrequency
+                          ? DOCUMENT_FREQUENCY(groupB?.collectionFrequency)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -897,7 +943,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupB?.treatment
+                          ? DOCUMENT_WASTE_TREATMENT(groupB?.treatment)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -905,7 +956,7 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: getCompaniesTransport(groupB), style: "field" },
                     ],
                     [
                       {
@@ -913,11 +964,11 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: getCompaniesDestination(groupB), style: "field" },
                     ],
                     [
                       {
-                        text: "Resíduos inertes (Classe IIB)",
+                        text: "Resíduos comuns não recicláveis (Grupo D)",
                         colSpan: 2,
                         style: "title",
                         bold: true,
@@ -935,11 +986,14 @@ export function render({
                     ],
                     [
                       {
-                        text: "Resíduo Gerado",
+                        text: "Resíduos Gerado",
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupDNr?.names?.join(", ") ?? "",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -947,7 +1001,15 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text:
+                          groupDNr?.originPoints
+                            ?.map((item) =>
+                              DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(item)
+                            )
+                            .join(", ") ?? "",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -955,7 +1017,14 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: getGroupQuantity(
+                          groupDNr?.quantity,
+                          groupDNr?.unit,
+                          groupDNr?.frequency
+                        ),
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -963,7 +1032,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupDNr?.packing
+                          ? DOCUMENT_HEALTH_WASTE_PACKING(groupDNr?.packing)
+                          : "-",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -971,7 +1045,7 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: "-", style: "field" },
                     ],
                     [
                       {
@@ -979,8 +1053,10 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-
-                      "",
+                      {
+                        text: "Não há – somente resíduos sólidos",
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -988,7 +1064,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupDNr?.collectionFrequency
+                          ? DOCUMENT_FREQUENCY(groupDNr?.collectionFrequency)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -996,7 +1077,12 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      {
+                        text: groupDNr?.treatment
+                          ? DOCUMENT_WASTE_TREATMENT(groupDNr?.treatment)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
                     ],
                     [
                       {
@@ -1004,7 +1090,7 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
-                      "",
+                      { text: getCompaniesTransport(groupDNr), style: "field" },
                     ],
                     [
                       {
@@ -1012,7 +1098,284 @@ export function render({
                         colSpan: 1,
                         style: "field",
                       },
+                      {
+                        text: getCompaniesDestination(groupDNr),
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos comuns recicláveis (Grupo D)",
+                        colSpan: 2,
+                        style: "title",
+                        bold: true,
+                      },
                       "",
+                    ],
+                    [
+                      {
+                        text: "",
+                      },
+                      {
+                        text: `Resíduos`,
+                        style: "headerTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos Gerado",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupDR?.names?.join(", ") ?? "",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Ponto de Geração",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text:
+                          groupDR?.originPoints
+                            ?.map((item) =>
+                              DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(item)
+                            )
+                            .join(", ") ?? "",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Quantidade",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: getGroupQuantity(
+                          groupDR?.quantity,
+                          groupDR?.unit,
+                          groupDR?.frequency
+                        ),
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Acondicionamento interno",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupDR?.packing
+                          ? DOCUMENT_HEALTH_WASTE_PACKING(groupDR?.packing)
+                          : "-",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Acondicionamento externo",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      { text: "-", style: "field" },
+                    ],
+                    [
+                      {
+                        text: "Medidas de contenção em caso de acidente",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: "Não há – somente resíduos sólidos",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Frequência de coleta",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupDR?.collectionFrequency
+                          ? DOCUMENT_FREQUENCY(groupDR?.collectionFrequency)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Destinação",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupDR?.treatment
+                          ? DOCUMENT_WASTE_TREATMENT(groupDR?.treatment)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Empresa responsável pelo transporte dos resíduos",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      { text: getCompaniesTransport(groupDR), style: "field" },
+                    ],
+                    [
+                      {
+                        text: "Empresa responsável pelo destino  dos resíduos",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: getCompaniesDestination(groupDR),
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos perfurocortantes (Grupo E)",
+                        colSpan: 2,
+                        style: "title",
+                        bold: true,
+                      },
+                      "",
+                    ],
+                    [
+                      {
+                        text: "",
+                      },
+                      {
+                        text: `Resíduos`,
+                        style: "headerTable",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Resíduos Gerado",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupE?.names?.join(", ") ?? "",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Ponto de Geração",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text:
+                          groupE?.originPoints
+                            ?.map((item) =>
+                              DOCUMENT_HEALTH_WASTE_ORIGIN_POINT(item)
+                            )
+                            .join(", ") ?? "",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Quantidade",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: getGroupQuantity(
+                          groupE?.quantity,
+                          groupE?.unit,
+                          groupE?.frequency
+                        ),
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Acondicionamento interno",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupE?.packing
+                          ? DOCUMENT_HEALTH_WASTE_PACKING(groupE?.packing)
+                          : "-",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Acondicionamento externo",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      { text: "-", style: "field" },
+                    ],
+                    [
+                      {
+                        text: "Medidas de contenção em caso de acidente",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: "Não há – somente resíduos sólidos",
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Frequência de coleta",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupE?.collectionFrequency
+                          ? DOCUMENT_FREQUENCY(groupE?.collectionFrequency)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Destinação",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: groupE?.treatment
+                          ? DOCUMENT_WASTE_TREATMENT(groupE?.treatment)
+                          : FIELD_EMPTY,
+                        style: "field",
+                      },
+                    ],
+                    [
+                      {
+                        text: "Empresa responsável pelo transporte dos resíduos",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      { text: getCompaniesTransport(groupE), style: "field" },
+                    ],
+                    [
+                      {
+                        text: "Empresa responsável pelo destino  dos resíduos",
+                        colSpan: 1,
+                        style: "field",
+                      },
+                      {
+                        text: getCompaniesDestination(groupE),
+                        style: "field",
+                      },
                     ],
                   ],
                 },

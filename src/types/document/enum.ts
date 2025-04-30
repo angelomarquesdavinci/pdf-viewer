@@ -98,6 +98,7 @@ export enum DocumentWasteTreatment {
   AGRICULTURAL_USE = 15,
   STOCK = 16,
   UNSPECIFIED = 17,
+  ANIMAL_FEED = 18,
   OTHER = 99,
 }
 
@@ -116,6 +117,7 @@ export enum DocumentWasteOriginPoint {
   OIL_BOX = 11, // Caixa de Gordura
   CSAO = 12, // Caixa Separadora Água/Óleo
   OFFICE = 13, // Escritório / Consultório
+  WAREHOUSE = 14, // Almoxarifado
 }
 
 export enum DocumentWasteClass {
@@ -187,6 +189,7 @@ export enum IDocumentWasteContainmentAccident {
   IMMEDIATE_NOTIFICATION = 1, // - Notificação imediata das autoridades competentes
   USE_EQUIPMENT = 2, // - Utilização de Equipamentos de Proteção Individual (EPIs)
   ABSORBENT_MATERIALS_OR_FIXED_BARRIERS = 3, // - Utilização de materiais absorventes ou barreiras fixas
+  UNSPECIFIED = 4, // - Não especificado
 }
 
 export enum DocumentWasteAttributes { // Caracterização do efluente bruto
@@ -339,7 +342,7 @@ export enum DocumentHealthWasteOriginPoint {
   ADMINISTRATIVE = 13, // Administrativo
   BATHROOMS = 14, // Banheiros
   KITCHENETTE = 15, // Copa / Cozinha
-  CAFETERIA = 16, // Refeitório
+  CAFETERIA = 16, // Refeitório / Restaurante
   STOCKROOM = 17, // Estoque/almoxarifado
   ON_SITE_STOCK = 18, // Estoque na empresa (aguardando destinação)
   SCHOOL = 19, // Sala de aula / escola
@@ -359,6 +362,11 @@ export enum DocumentHealthWasteOriginPoint {
   BATH_AND_SHEARING = 33, // Banho e tosa
   IT_ROOM = 34, // Sala de TI - Tecnologia da Informação
   ALL_SECTORS = 35, // Todas os setores da empresa
+  BAKERY = 36, // Confeitaria
+  PODIATRY = 37, // Podologia
+  RADIOLOGY = 38, // Radiologia
+  AMBULATORY = 39, // Ambulatório
+  WAREHOUSE = 40, // Almoxarifado
 }
 
 export enum DocumentHealthWastePacking {
@@ -420,4 +428,41 @@ export enum DocumentHealthAdditionsSecurityVaccines {
   TETANUS = 2, // TÉTANO
   RUBELLA = 3, // RUBÉOLA
   OTHER = 99, // OUTRAS
+}
+
+export enum DocumentHealthWasteIdentification {
+  GROUP_A1_1 = 1,
+  GROUP_A1_2 = 2,
+  GROUP_A1_3 = 3,
+  GROUP_A1_4 = 4,
+  GROUP_A1_5 = 5,
+  GROUP_A1_6 = 6,
+  GROUP_A1_7 = 7,
+  GROUP_A2_1 = 8,
+  GROUP_A3_1 = 9,
+  GROUP_A4_1 = 10,
+  GROUP_A4_2 = 11,
+  GROUP_A4_3 = 12,
+  GROUP_A4_4 = 13,
+  GROUP_A4_5 = 14,
+  GROUP_A4_6 = 15,
+  GROUP_A4_7 = 16,
+  GROUP_A4_8 = 17,
+  GROUP_A5_1 = 18,
+  GROUP_B_1 = 19,
+  GROUP_B_2 = 20,
+  GROUP_B_3 = 21,
+  GROUP_B_4 = 22,
+  GROUP_B_5 = 23,
+  GROUP_D_1 = 24,
+  GROUP_D_2 = 25,
+  GROUP_D_3 = 26,
+  GROUP_D_4 = 27,
+  GROUP_D_5 = 28,
+  GROUP_D_6 = 29,
+  GROUP_E_1 = 30,
+  GROUP_E_2 = 31,
+  GROUP_E_3 = 32,
+  GROUP_E_4 = 33,
+  GROUP_E_5 = 34,
 }

@@ -4,23 +4,22 @@ import "./App.css";
 
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
-import { render as render_fb } from "./fb-template";
-import { render as render_mcr } from "./mcr-template";
-import { render as render_rio_negro_template } from "./rio-negro-template";
-import { render as render_default } from "./default-template";
-import { render as render_francisco_beltrao_pgrss_template } from "./pgrss/francisco-beltrao-template";
 import { Cnae, wasteClassifications } from "./constant";
 import { document } from "./document-example";
+import { render as render_campo_largo_pgrss_template } from "./pgrss/campo-largo";
+import { render as render_ampere_template } from "./pgrss/ampere";
+import { render as render_default_template } from "./default-template";
+import { render as render_pgrss_state_santa_catarina_template } from "./pgrss/state-santa-catarina";
 
 // Set the fonts
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 const fonts = {
   Helvetica: {
-    normal: "Helvetica",
-    bold: "Helvetica-Bold",
-    italics: "Helvetica-Oblique",
-    bolditalics: "Helvetica-BoldOblique",
+    normal: `${window.location.origin}/fonts/helvetica/default.ttf`,
+    // italics: `${window.location.origin}/fonts/Helvetica/times-new-roman-italic.ttf`,
+    bold: `${window.location.origin}/fonts/helvetica/bold.ttf`,
+    // bolditalics: `${window.location.origin}/fonts/Helvetica/times-new-roman-bold-italic.ttf`,
   },
   TimesNewRoman: {
     normal: `${window.location.origin}/fonts/TimesNewRoman/times-new-roman.ttf`,
@@ -49,13 +48,16 @@ function App() {
 
   // Generate the PDF
   const pdfDocGenerator = pdfMake.createPdf(
-    render_francisco_beltrao_pgrss_template({
+    render_pgrss_state_santa_catarina_template({
       classifications: wasteClassifications,
       cnaes: Cnae,
       document: document,
       techinical: {
         id: "171c0b54-3e27-41ce-a49b-c67689435ddc",
-        class: "CRQ IX 09202481",
+        professionalClass: {
+          identity: "09202481",
+          institution: "CRQ IX",
+        },
         company: {
           address: {
             city: "Curitiba",
@@ -82,6 +84,7 @@ function App() {
         status: 2,
         updatedAt: 1715085266,
         username: "00000000000119",
+        identityNumber: "13562171",
       },
       isApproved: false,
     }),
